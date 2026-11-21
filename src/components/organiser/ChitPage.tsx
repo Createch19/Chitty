@@ -26,36 +26,42 @@ export function ChitPage({ d, links, today }: { d: ChitDetailData; links: Record
     <div className="flex flex-col gap-5">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="card relative overflow-hidden p-5 sm:p-6">
         <div aria-hidden className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-[radial-gradient(circle,var(--aurora-1),transparent_65%)]" />
-        <div className="relative flex flex-wrap items-center gap-5">
-          <div className="gold-fill font-display grid h-20 w-20 place-items-center rounded-3xl text-[34px] font-extrabold shadow-[0_18px_40px_-16px_rgba(240,169,10,.9)]">{d.chit.code}</div>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-display text-[24px] font-extrabold leading-tight">{L(`Chit ${d.chit.code}`, `சீட்டு ${d.chit.code}`)}</h1>
+        {/* Phone: code tile · name + amount · ring on one row, facts full width below. Wider: facts sit under the name. */}
+        <div className="relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-4 sm:gap-x-5">
+          <div
+            className={cx(
+              "gold-fill font-display grid h-14 w-14 place-items-center rounded-2xl font-extrabold shadow-[0_18px_40px_-16px_rgba(240,169,10,.9)] sm:row-span-2 sm:h-20 sm:w-20 sm:rounded-3xl",
+              d.chit.code.length >= 3 ? "text-[18px] sm:text-[25px]" : d.chit.code.length === 2 ? "text-[22px] sm:text-[30px]" : "text-[26px] sm:text-[34px]",
+            )}
+          >
+            {d.chit.code}
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <h1 className="font-display text-[20px] font-extrabold leading-tight sm:text-[24px]">{L(`Chit ${d.chit.code}`, `சீட்டு ${d.chit.code}`)}</h1>
               {d.chit.status === "draft" ? <Badge>{L("Draft", "வரைவு")}</Badge> : d.chit.status === "completed" ? <Badge tone="ok">{L("Completed", "முடிந்தது")}</Badge> : <Badge tone="gold">{L("Running", "நடக்கிறது")}</Badge>}
             </div>
-            <div className="font-display gold-text mt-1 text-[30px] font-extrabold leading-none">{formatINR(t.totalPaise)}</div>
-            <div className="mt-3 flex flex-wrap gap-2 text-[12.5px]">
-              <Fact icon={<CalendarDays size={14} />}>{L(`${t.months} months · ${formatINR(t.installmentPaise)} a month`, `${t.months} மாதம் · மாதம் ${formatINR(t.installmentPaise)}`)}</Fact>
-              <Fact>{L(`${t.rateBps / 100}% a month = ${formatINR(t.interestPaise)}`, `மாத வட்டி ${t.rateBps / 100}% = ${formatINR(t.interestPaise)}`)}</Fact>
-              <Fact icon={<Gavel size={14} />}>{L(`Steps of ${formatINR(t.incrementPaise)}`, `${formatINR(t.incrementPaise)} படிகள்`)}</Fact>
-              <Fact icon={<Timer size={14} />}>{L(`Opens ${d.chit.openTime}`, `${d.chit.openTime}-க்கு திறக்கும்`)}</Fact>
-            </div>
+            <div className="font-display gold-text tabular mt-1 whitespace-nowrap text-[22px] font-extrabold leading-none min-[400px]:text-[24px] sm:text-[30px]">{formatINR(t.totalPaise)}</div>
           </div>
-          {d.chit.status === "draft" ? (
-            <Ring value={d.seats.length / t.months} size={92} stroke={9}>
-              <div className="text-center leading-none">
-                <div className="font-display text-[22px] font-extrabold">{d.seats.length}</div>
-                <div className="text-[10.5px] text-ink-3">/ {t.months}</div>
-              </div>
-            </Ring>
-          ) : (
-            <Ring value={d.months.filter((m) => m.status === "closed").length / t.months} size={92} stroke={9}>
-              <div className="text-center leading-none">
-                <div className="font-display text-[22px] font-extrabold">{d.months.filter((m) => m.status === "closed").length}</div>
-                <div className="text-[10.5px] text-ink-3">/ {t.months}</div>
-              </div>
-            </Ring>
-          )}
+          <div className="sm:row-span-2">
+            {(() => {
+              const done = d.chit.status === "draft" ? d.seats.length : d.months.filter((m) => m.status === "closed").length;
+              return (
+                <Ring value={done / t.months} size={68} stroke={7}>
+                  <div className="text-center leading-none">
+                    <div className="font-display text-[20px] font-extrabold">{done}</div>
+                    <div className="text-[10.5px] text-ink-3">/ {t.months}</div>
+                  </div>
+                </Ring>
+              );
+            })()}
+          </div>
+          <div className="col-span-3 flex flex-wrap gap-2 text-[12.5px] sm:col-span-1 sm:col-start-2">
+            <Fact icon={<CalendarDays size={14} />}>{L(`${t.months} months · ${formatINR(t.installmentPaise)} a month`, `${t.months} மாதம் · மாதம் ${formatINR(t.installmentPaise)}`)}</Fact>
+            <Fact>{L(`${t.rateBps / 100}% a month = ${formatINR(t.interestPaise)}`, `மாத வட்டி ${t.rateBps / 100}% = ${formatINR(t.interestPaise)}`)}</Fact>
+            <Fact icon={<Gavel size={14} />}>{L(`Steps of ${formatINR(t.incrementPaise)}`, `${formatINR(t.incrementPaise)} படிகள்`)}</Fact>
+            <Fact icon={<Timer size={14} />}>{L(`Opens ${d.chit.openTime}`, `${d.chit.openTime}-க்கு திறக்கும்`)}</Fact>
+          </div>
         </div>
       </motion.div>
 
@@ -111,7 +117,7 @@ function Draft({ d, today }: { d: ChitDetailData; today: string }) {
                 <div className="min-w-0 flex-1">
                   <div className="font-display flex items-center gap-1.5 text-[15px] font-bold leading-tight">
                     {s.code}
-                    {s.isOrganiser && <Badge tone="violet" className="px-2 py-0 font-sans text-[10.5px]">{L("You · wins month 1", "நீங்கள் · 1-வது மாதம்")}</Badge>}
+                    {s.isOrganiser && <Badge tone="violet" className="px-2 py-0 font-sans text-[10.5px]">{L("You · Organiser", "நீங்கள் · நடத்துநர்")}</Badge>}
                   </div>
                   <div className="truncate text-[12.5px] text-ink-2">
                     {s.name} <span className="text-ink-3">· {fmtPhone(s.phone)}</span>
