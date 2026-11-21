@@ -9,7 +9,7 @@ import type { DB, Tx } from "@/db/client";
 import { auditLog, bid, chit, memberLink, month, organiser, payment, payout, pushSubscription, roomJoin, seat } from "@/db/schema";
 import { withOrganiser } from "@/db/tenant";
 import { MoneyError, makeTerms, monthlyPayment, type Terms } from "@/domain/money";
-import { checkBid, checkStart, lastPayDate, monthsToCreate, nextValidBid } from "@/domain/rules";
+import { checkBid, checkStart, isChitCode, lastPayDate, monthsToCreate, nextValidBid } from "@/domain/rules";
 import { AccountError, normalizeMobile } from "./accounts";
 import { publish } from "./events";
 import { deliverLater, queueMessages } from "./notify";
@@ -104,7 +104,7 @@ export async function createChit(db: DB, orgId: string, input: NewChit): Promise
   return withOrganiser(db, orgId, async (tx) => {
     const used = (await tx.select({ code: chit.code }).from(chit)).map((r) => r.code);
     const code = input.code ? input.code.trim().toUpperCase() : nextChitCode(used);
-    if (!/^[A-Z]{1,3}$/.test(code)) throw new ChitError("INVALID_CODE");
+    if (!isChitCode(code)) throw new ChitError("INVALID_CODE");
     if (used.includes(code)) throw new ChitError("CODE_TAKEN");
     const [c] = await tx
       .insert(chit)

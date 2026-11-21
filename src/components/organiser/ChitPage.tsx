@@ -30,8 +30,8 @@ export function ChitPage({ d, links, today }: { d: ChitDetailData; links: Record
         <div className="relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-4 sm:gap-x-5">
           <div
             className={cx(
-              "gold-fill font-display grid h-14 w-14 place-items-center rounded-2xl font-extrabold shadow-[0_18px_40px_-16px_rgba(240,169,10,.9)] sm:row-span-2 sm:h-20 sm:w-20 sm:rounded-3xl",
-              d.chit.code.length >= 3 ? "text-[18px] sm:text-[25px]" : d.chit.code.length === 2 ? "text-[22px] sm:text-[30px]" : "text-[26px] sm:text-[34px]",
+              "gold-fill font-display grid h-14 min-w-14 place-items-center whitespace-nowrap rounded-2xl px-2 font-extrabold shadow-[0_18px_40px_-16px_rgba(240,169,10,.9)] sm:row-span-2 sm:h-20 sm:min-w-20 sm:rounded-3xl sm:px-3",
+              d.chit.code.length >= 4 ? "text-[12px] sm:text-[18px]" : d.chit.code.length === 3 ? "text-[18px] sm:text-[25px]" : d.chit.code.length === 2 ? "text-[22px] sm:text-[30px]" : "text-[26px] sm:text-[34px]",
             )}
           >
             {d.chit.code}
@@ -41,7 +41,7 @@ export function ChitPage({ d, links, today }: { d: ChitDetailData; links: Record
               <h1 className="font-display text-[20px] font-extrabold leading-tight sm:text-[24px]">{L(`Chit ${d.chit.code}`, `சீட்டு ${d.chit.code}`)}</h1>
               {d.chit.status === "draft" ? <Badge>{L("Draft", "வரைவு")}</Badge> : d.chit.status === "completed" ? <Badge tone="ok">{L("Completed", "முடிந்தது")}</Badge> : <Badge tone="gold">{L("Running", "நடக்கிறது")}</Badge>}
             </div>
-            <div className="font-display gold-text tabular mt-1 whitespace-nowrap text-[22px] font-extrabold leading-none min-[400px]:text-[24px] sm:text-[30px]">{formatINR(t.totalPaise)}</div>
+            <div className="font-display gold-text tabular mt-1 whitespace-nowrap text-[20px] font-extrabold leading-none min-[400px]:text-[24px] sm:text-[30px]">{formatINR(t.totalPaise)}</div>
           </div>
           <div className="sm:row-span-2">
             {(() => {

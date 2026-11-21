@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition } from "react";
 import { createChitAction } from "@/app/actions/chits";
 import { Button, Segmented, cx } from "@/components/ui/kit";
 import { MoneyError, defaultRateBps, formatINR, makeTerms, schedule } from "@/domain/money";
+import { CHIT_CODE_MAX, isChitCode } from "@/domain/rules";
 import { useL } from "@/lib/prefs";
 import { useErrorText } from "./common";
 
@@ -16,7 +17,7 @@ export function NewChitForm({ suggestedCode, usedCodes }: { suggestedCode: strin
   const L = useL();
   const err = useErrorText();
   const [code, setCode] = useState(suggestedCode);
-  const codeError = !/^[A-Z]{1,3}$/.test(code) ? "INVALID_CODE" : usedCodes.includes(code) ? "CODE_TAKEN" : null;
+  const codeError = !isChitCode(code) ? "INVALID_CODE" : usedCodes.includes(code) ? "CODE_TAKEN" : null;
   const shown = code || suggestedCode;
   const [total, setTotal] = useState("500000");
   const [months, setMonths] = useState("20");
@@ -65,15 +66,15 @@ export function NewChitForm({ suggestedCode, usedCodes }: { suggestedCode: strin
           </p>
         </div>
 
-        <Field label={L("Chit code", "சீட்டு code")} hint={L("1–3 letters, you can change it", "1–3 எழுத்து, மாற்றலாம்")}>
+        <Field label={L("Chit code", "சீட்டு code")} hint={L("1–7 letters or numbers, you can change it", "1–7 எழுத்து/எண், மாற்றலாம்")}>
           <input
             value={code}
-            maxLength={3}
+            maxLength={CHIT_CODE_MAX}
             autoCapitalize="characters"
             autoComplete="off"
             spellCheck={false}
             onChange={(e) => {
-              setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3));
+              setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, CHIT_CODE_MAX));
               setServerError(null);
             }}
             className={cx(inputCls, "font-display text-[18px] font-bold tracking-[.12em]", codeError && "border-danger")}

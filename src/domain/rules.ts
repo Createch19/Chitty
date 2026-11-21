@@ -5,6 +5,10 @@
 import type { Terms } from "./money";
 import { minimumDiscount } from "./money";
 
+/** Chit code: 1–7 capital letters or digits (A, SAL, KMS2026). Member IDs are code + 01, 02… */
+export const CHIT_CODE_MAX = 7;
+export const isChitCode = (code: string) => /^[A-Z0-9]{1,7}$/.test(code);
+
 export type Reject = { ok: false; code: string; minPaise?: number };
 export type Ok = { ok: true; minPaise: number };
 

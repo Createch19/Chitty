@@ -65,7 +65,7 @@ export async function buildTemplate() {
   ];
   head(c);
   c.addRows([
-    ["Chit code", "A", "1–3 letters; must not be used by another of your chits"],
+    ["Chit code", "A", "1–7 letters or numbers; must not be used by another of your chits"],
     ["Chit value (₹)", 500000, "Whole rupees"],
     ["Months", 20, "Number of months = number of member IDs"],
     ["Monthly rate %", 1.5, "Default 30 ÷ months"],

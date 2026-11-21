@@ -4,7 +4,7 @@
  */
 import { cleanAadhaar } from "./aadhaar";
 import { MoneyError, makeTerms, minimumDiscount, monthlyPayment, type Terms } from "./money";
-import { auctionDate } from "./rules";
+import { auctionDate, isChitCode } from "./rules";
 
 export type ImportData = {
   chit: { code: string; total: string; months: string; rate: string; increment: string; startDate: string; openTime: string; rows: Record<string, number> };
@@ -47,8 +47,8 @@ export function checkImport(d: ImportData, usedCodes: string[], today: string): 
 
   /* ---- Chit ---- */
   const code = d.chit.code.trim().toUpperCase();
-  if (!/^[A-Z]{1,3}$/.test(code)) bad("Chit", d.chit.rows.code ?? null, "Chit code must be 1–3 letters.", "சீட்டு code 1–3 எழுத்துகள்.");
-  const codeTaken = /^[A-Z]{1,3}$/.test(code) && usedCodes.includes(code);
+  if (!isChitCode(code)) bad("Chit", d.chit.rows.code ?? null, "Chit code must be 1–7 letters or numbers.", "சீட்டு code 1–7 எழுத்து அல்லது எண்.");
+  const codeTaken = isChitCode(code) && usedCodes.includes(code);
   if (codeTaken) bad("Chit", d.chit.rows.code ?? null, `Chit code ${code} is already used. Pick another.`, `சீட்டு code ${code} ஏற்கனவே உள்ளது. வேறு code கொடுக்கவும்.`);
   let terms: Terms | null = null;
   const rate = Number(d.chit.rate.replace(/[%\s]/g, ""));

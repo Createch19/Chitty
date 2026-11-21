@@ -38,7 +38,7 @@ export function useErrorText() {
       INVALID_NAME: L("Enter a name.", "பெயர் கொடுக்கவும்."),
       ORGANISER_SEAT: L("This is your own seat; pick another seat as yours first.", "இது உங்கள் இடம்; முதலில் வேறு இடத்தை உங்களுடையதாக்கவும்."),
       CODE_TAKEN: L("That chit code is already used.", "அந்த சீட்டு code ஏற்கனவே உள்ளது."),
-      INVALID_CODE: L("Use 1–3 letters for the code.", "Code-க்கு 1–3 எழுத்துகள்."),
+      INVALID_CODE: L("Use 1–7 letters or numbers for the code.", "Code-க்கு 1–7 எழுத்து அல்லது எண்."),
       INSTALLMENT_NOT_EXACT: L("Chit value ÷ months must be exact.", "சீட்டுத் தொகை ÷ மாதங்கள் சரியாக வர வேண்டும்."),
       INTEREST_NOT_EXACT: L("Chit value × rate must be exact; try another rate.", "தொகை × வட்டி சரியாக வரவில்லை; வேறு % முயற்சிக்கவும்."),
       INVALID_RATE: L("Rate: above 0%, up to 2 decimals.", "வட்டி: 0%-க்கு மேல், 2 தசம இடம் வரை."),

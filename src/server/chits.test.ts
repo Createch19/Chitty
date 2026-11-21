@@ -75,6 +75,17 @@ describe("draft chit and seats", () => {
     expect(d.seats).toMatchObject([{ number: 1, code: "A01", name: "Murugan", isOrganiser: true }]);
   });
 
+  it("accepts 1–7 letters or numbers as the chit code and refuses anything else", async () => {
+    const id = await createChit(h.db, org, { totalRupees: 100000, months: 10, code: "kms2026" });
+    const d = await getChitDetail(h.db, org, id);
+    expect(d.chit.code).toBe("KMS2026");
+    expect(d.seats[0].code).toBe("KMS202601");
+    expect(await createChit(h.db, org, { totalRupees: 100000, months: 10, code: "SALEM" })).toBeTruthy();
+    for (const bad of ["ABCDEFGH", "SAL-1", "A B", "தமிழ்"])
+      await expect(createChit(h.db, org, { totalRupees: 100000, months: 10, code: bad })).rejects.toThrow("INVALID_CODE");
+    await expect(createChit(h.db, org, { totalRupees: 100000, months: 10, code: "KMS2026" })).rejects.toThrow("CODE_TAKEN");
+  });
+
   it("fills the lowest free seat number, refuses a 21st seat, and freezes seats after start", async () => {
     const id = await fullDraft("Q");
     const d = await getChitDetail(h.db, org, id);

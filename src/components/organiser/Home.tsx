@@ -102,7 +102,7 @@ export function Home({ ownerName, stats, chits }: { ownerName: string; stats: { 
               <motion.div key={c.id} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
                 <Link href={href} className="group">
                   <motion.div whileHover={{ y: -3 }} className="card flex items-center gap-4 p-4">
-                    <div className="gold-fill font-display grid h-14 w-14 shrink-0 place-items-center rounded-2xl text-[22px] font-extrabold shadow-[0_10px_24px_-12px_rgba(240,169,10,.8)]">{c.code}</div>
+                    <div className={`gold-fill font-display grid h-14 min-w-14 shrink-0 place-items-center whitespace-nowrap rounded-2xl px-2 font-extrabold shadow-[0_10px_24px_-12px_rgba(240,169,10,.8)] ${c.code.length >= 4 ? "text-[12px]" : c.code.length === 3 ? "text-[17px]" : "text-[22px]"}`}>{c.code}</div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-display text-[17px] font-bold">
