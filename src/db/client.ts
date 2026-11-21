@@ -41,6 +41,7 @@ export async function createDb(opts: { url?: string; dataDir?: string } = {}): P
     };
   }
   if (opts.url) {
+    await ensureDatabase(opts.url);
     const client = postgres(opts.url, { max: 10, onnotice: () => {} });
     const db = drizzlePg(client, { schema }) as unknown as DB;
     await migratePg(db as never, { migrationsFolder });
@@ -51,6 +52,33 @@ export async function createDb(opts: { url?: string; dataDir?: string } = {}): P
   const db = drizzlePglite(client, { schema }) as unknown as DB;
   await migratePglite(db as never, { migrationsFolder });
   return { db, close: () => client.close() };
+}
+
+/** First deploy on a shared PostgreSQL server: create the app's database if it is not there yet. */
+async function ensureDatabase(url: string) {
+  const probe = postgres(url, { max: 1, onnotice: () => {} });
+  try {
+    await probe`select 1`;
+    return;
+  } catch (e) {
+    if ((e as { code?: string }).code !== "3D000") throw e; // anything but "database does not exist"
+  } finally {
+    await probe.end();
+  }
+  const target = new URL(url);
+  const name = decodeURIComponent(target.pathname.slice(1));
+  if (!/^[A-Za-z0-9_]+$/.test(name)) throw new Error(`Database name "${name}" must be letters, digits or _`);
+  const admin = new URL(url);
+  admin.pathname = "/postgres";
+  const server = postgres(admin.toString(), { max: 1, onnotice: () => {} });
+  try {
+    await server.unsafe(`create database "${name}"`);
+    console.log(`[chitty] created database ${name}`);
+  } catch (e) {
+    if ((e as { code?: string }).code !== "42P04") throw e; // already exists (another start won the race)
+  } finally {
+    await server.end();
+  }
 }
 
 const g = globalThis as unknown as { __chittyDb?: Promise<Handle> };
