@@ -5,7 +5,7 @@ import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { Crown, Dices, Gavel, Lock, Pause, Play, RotateCcw, Sparkles, Trophy, Users, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Stage, type StageHandle, type StageSeat } from "@/components/room/Stage";
-import { Badge, Button, ConfirmDialog, Segmented, Sphere, cx, useToast } from "@/components/ui/kit";
+import { Badge, Button, Portal, ConfirmDialog, Segmented, Sphere, cx, useToast } from "@/components/ui/kit";
 import { chitA, hue, organiser, seatsA } from "@/lib/mock";
 import { eachPays, inr, minimumDiscount, nextValidBid, onGrid } from "@/lib/money";
 import { haptic, useL, useLang } from "@/lib/prefs";
@@ -563,7 +563,7 @@ export function RoomPreview() {
       />
 
       {/* ---------- winner overlay ---------- */}
-      <AnimatePresence>
+      <Portal><AnimatePresence>
         {overlay && result && (
           <motion.div className="fixed inset-0 z-50 grid place-items-center p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="absolute inset-0 bg-[rgba(5,4,10,.82)] backdrop-blur-md" onClick={() => setOverlay(false)} />
@@ -598,7 +598,7 @@ export function RoomPreview() {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence></Portal>
     </div>
   );
 }

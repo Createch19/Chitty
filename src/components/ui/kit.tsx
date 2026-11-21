@@ -9,15 +9,27 @@ import {
   useId,
   useRef,
   useState,
+  useSyncExternalStore,
   type ButtonHTMLAttributes,
   type ReactNode,
   type Ref,
 } from "react";
+import { createPortal } from "react-dom";
 import { inr } from "@/lib/money";
 import { hue as seatHue } from "@/lib/mock";
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 export { cx };
+
+/**
+ * Dialogs render into <body>. A `.card` uses backdrop-filter, which turns `position: fixed` children into
+ * card-sized boxes (and overflow-hidden clips them), so a dialog opened from inside a card broke on phones.
+ */
+const noSub = () => () => {};
+export function Portal({ children }: { children: ReactNode }) {
+  const onClient = useSyncExternalStore(noSub, () => true, () => false);
+  return onClient ? createPortal(children, document.body) : null;
+}
 
 /* ---------------- Button ---------------- */
 type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -200,7 +212,7 @@ export function ConfirmDialog({
     };
   }, [open, onNo]);
   return (
-    <AnimatePresence>
+    <Portal><AnimatePresence>
       {open && (
         <motion.div className="fixed inset-0 z-50 flex items-end justify-center p-3 sm:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
           <motion.div className="absolute inset-0 bg-[rgba(8,6,14,.55)] backdrop-blur-sm" onClick={onNo} />
@@ -228,7 +240,7 @@ export function ConfirmDialog({
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence></Portal>
   );
 }
 

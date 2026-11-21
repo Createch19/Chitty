@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { CalendarDays, Copy, Crown, Gavel, Pencil, Play, Rocket, Timer, Trash2, UserPlus, X } from "lucide-react";
 import { useState, useTransition, type ReactNode } from "react";
 import { addSeatAction, changeDateAction, deleteChitAction, openMonthAction, removeSeatAction, setOrganiserSeatAction, startChitAction, updateSeatAction } from "@/app/actions/chits";
-import { Badge, Button, ConfirmDialog, Ring, Sphere, cx, useToast } from "@/components/ui/kit";
+import { Badge, Button, Portal, ConfirmDialog, Ring, Sphere, cx, useToast } from "@/components/ui/kit";
 import { formatINR } from "@/domain/money";
 import { useL } from "@/lib/prefs";
 import { useDateText, useErrorText } from "./common";
@@ -373,7 +373,7 @@ function Running({ d }: { d: ChitDetailData }) {
         }}
       />
 
-      <AnimatePresence>
+      <Portal><AnimatePresence>
         {dateFor && (
           <motion.div className="fixed inset-0 z-50 flex items-end justify-center p-3 sm:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="absolute inset-0 bg-[rgba(8,6,14,.55)] backdrop-blur-sm" onClick={() => setDateFor(null)} />
@@ -406,7 +406,7 @@ function Running({ d }: { d: ChitDetailData }) {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence></Portal>
     </>
   );
 }

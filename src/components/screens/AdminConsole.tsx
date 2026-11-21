@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Building2, KeyRound, Lock, Plus, Power, ShieldCheck, Ticket, Users, X } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "@/components/brand";
-import { Badge, Button, ConfirmDialog, CountUp, cx, useToast } from "@/components/ui/kit";
+import { Badge, Button, Portal, ConfirmDialog, CountUp, cx, useToast } from "@/components/ui/kit";
 import { useL } from "@/lib/prefs";
 
 type Org = { id: number; business: string; owner: string; mobile: string; chits: number; ids: number; active: boolean; since: string };
@@ -122,7 +122,7 @@ export function AdminConsole() {
         }}
       />
 
-      <AnimatePresence>
+      <Portal><AnimatePresence>
         {sheet && (
           <motion.div className="fixed inset-0 z-50 flex items-end justify-center p-3 sm:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="absolute inset-0 bg-[rgba(8,6,14,.55)] backdrop-blur-sm" onClick={() => setSheet(false)} />
@@ -155,7 +155,7 @@ export function AdminConsole() {
             </motion.form>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence></Portal>
     </div>
   );
 }

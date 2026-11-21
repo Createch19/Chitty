@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Check, Copy, IdCard, Link2, Link2Off, MessageCircle, RefreshCw, X } from "lucide-react";
 import { useState, useTransition } from "react";
 import { issueLinkAction, revokeLinkAction } from "@/app/actions/chits";
-import { Badge, Button, ConfirmDialog, Sphere, cx, useToast } from "@/components/ui/kit";
+import { Badge, Button, Portal, ConfirmDialog, Sphere, cx, useToast } from "@/components/ui/kit";
 import { useL } from "@/lib/prefs";
 import type { ChitDetailData } from "./ChitPage";
 import { useDateText, useErrorText } from "./common";
@@ -93,7 +93,7 @@ export function MemberLinks({ d, links }: { d: ChitDetailData; links: Record<str
         })}
       </ul>
 
-      <AnimatePresence>{detailSeat && <MemberSheet key={detailSeat.id} seat={detailSeat} running={d.chit.status === "active"} onClose={() => setDetail(null)} />}</AnimatePresence>
+      <Portal><AnimatePresence>{detailSeat && <MemberSheet key={detailSeat.id} seat={detailSeat} running={d.chit.status === "active"} onClose={() => setDetail(null)} />}</AnimatePresence></Portal>
 
       <ConfirmDialog
         open={ask != null}
@@ -119,7 +119,7 @@ export function MemberLinks({ d, links }: { d: ChitDetailData; links: Record<str
         }}
       />
 
-      <AnimatePresence>
+      <Portal><AnimatePresence>
         {sheet && (
           <motion.div className="fixed inset-0 z-50 flex items-end justify-center p-3 sm:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="absolute inset-0 bg-[rgba(8,6,14,.55)] backdrop-blur-sm" onClick={() => setSheet(null)} />
@@ -161,7 +161,7 @@ export function MemberLinks({ d, links }: { d: ChitDetailData; links: Record<str
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence></Portal>
     </div>
   );
 }

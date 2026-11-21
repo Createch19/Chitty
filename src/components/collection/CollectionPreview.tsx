@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { BadgeCheck, Check, HandCoins, MessageCircle, RotateCcw, Sparkles, Wand2, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { BowlStage } from "@/components/collection/BowlStage";
-import { Badge, Button, ConfirmDialog, CountUp, Sphere, cx, useToast } from "@/components/ui/kit";
+import { Badge, Button, Portal, ConfirmDialog, CountUp, Sphere, cx, useToast } from "@/components/ui/kit";
 import { chitA, hue, organiser, seatsA } from "@/lib/mock";
 import { eachPays, inr } from "@/lib/money";
 import { haptic, useL, useLang } from "@/lib/prefs";
@@ -278,7 +278,7 @@ export function CollectionPreview() {
       />
 
       {/* WhatsApp message preview */}
-      <AnimatePresence>
+      <Portal><AnimatePresence>
         {wa != null && (
           <motion.div className="fixed inset-0 z-50 flex items-end justify-center p-3 sm:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="absolute inset-0 bg-[rgba(8,6,14,.55)] backdrop-blur-sm" onClick={() => setWa(null)} />
@@ -302,7 +302,7 @@ export function CollectionPreview() {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence></Portal>
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { memberBidAction, memberJoinAction } from "@/app/actions/member";
 import { LangToggle } from "@/components/brand";
 import { Stage, type StageHandle } from "@/components/room/Stage";
-import { Badge, Button, Sphere, cx, useToast } from "@/components/ui/kit";
+import { Badge, Button, Portal, Sphere, cx, useToast } from "@/components/ui/kit";
 import { formatINR } from "@/domain/money";
 import type { RoomSnapshot } from "@/server/members";
 import { haptic, useL, useLang } from "@/lib/prefs";
@@ -286,7 +286,7 @@ export function LiveRoom({ token, initial }: { token: string; initial: RoomSnaps
         </section>
       </div>
 
-      <AnimatePresence>
+      <Portal><AnimatePresence>
         {overlay && m.status === "closed" && m.winner != null && (
           <motion.div className="fixed inset-0 z-50 grid place-items-center p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="absolute inset-0 bg-[rgba(5,4,10,.82)] backdrop-blur-md" onClick={() => setOverlay(false)} />
@@ -306,7 +306,7 @@ export function LiveRoom({ token, initial }: { token: string; initial: RoomSnaps
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence></Portal>
     </div>
   );
 }
