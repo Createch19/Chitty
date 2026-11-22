@@ -1,9 +1,9 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { Sparkles } from "lucide-react";
+import { Save, Sparkles } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
-import { createChitAction } from "@/app/actions/chits";
+import { createChitAction, updateChitAction } from "@/app/actions/chits";
 import { Button, Segmented, cx } from "@/components/ui/kit";
 import { MoneyError, defaultRateBps, formatINR, makeTerms, schedule } from "@/domain/money";
 import { CHIT_CODE_MAX, isChitCode } from "@/domain/rules";
@@ -13,18 +13,28 @@ import { useErrorText } from "./common";
 const VALUES = [100000, 200000, 300000, 500000, 1000000];
 const MONTHS = [10, 12, 15, 20, 25];
 
-export function NewChitForm({ suggestedCode, usedCodes }: { suggestedCode: string; usedCodes: string[] }) {
+export type ChitEdit = {
+  chitId: string;
+  /** highest member ID number already added; months can't go below it */
+  topSeat: number;
+  values: { code: string; totalRupees: number; months: number; ratePct: number; incrementRupees: number; openTime: string; display: "id" | "name" };
+};
+
+/** New chit, or (with `edit`) change a draft chit before it starts. */
+export function NewChitForm({ suggestedCode, usedCodes, edit }: { suggestedCode: string; usedCodes: string[]; edit?: ChitEdit }) {
   const L = useL();
   const err = useErrorText();
-  const [code, setCode] = useState(suggestedCode);
+  const v = edit?.values;
+  const [code, setCode] = useState(v?.code ?? suggestedCode);
   const codeError = !isChitCode(code) ? "INVALID_CODE" : usedCodes.includes(code) ? "CODE_TAKEN" : null;
   const shown = code || suggestedCode;
-  const [total, setTotal] = useState("500000");
-  const [months, setMonths] = useState("20");
-  const [rate, setRate] = useState<string | null>(null); // null = follow 30 ÷ months
-  const [step, setStep] = useState("500");
-  const [time, setTime] = useState("09:00");
-  const [display, setDisplay] = useState<"id" | "name">("id");
+  const [total, setTotal] = useState(String(v?.totalRupees ?? 500000));
+  const [months, setMonths] = useState(String(v?.months ?? 20));
+  // null = follow 30 ÷ months
+  const [rate, setRate] = useState<string | null>(v && v.ratePct * 100 !== defaultRateBps(v.months) ? String(v.ratePct) : null);
+  const [step, setStep] = useState(String(v?.incrementRupees ?? 500));
+  const [time, setTime] = useState(v?.openTime ?? "09:00");
+  const [display, setDisplay] = useState<"id" | "name">(v?.display ?? "id");
   const [serverError, setServerError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -39,11 +49,15 @@ export function NewChitForm({ suggestedCode, usedCodes }: { suggestedCode: strin
     }
   }, [total, n, ratePct, step]);
 
+  const seatError = edit && n >= 2 && n < edit.topSeat ? "SEATS_ABOVE_MONTHS" : null;
+  const formError = codeError ?? seatError;
+
   const submit = () => {
-    if (!preview.ok || codeError) return;
+    if (!preview.ok || formError) return;
     setServerError(null);
     start(async () => {
-      const r = await createChitAction({ code, totalRupees: Number(total), months: n, ratePct: Number(ratePct), incrementRupees: Number(step), openTime: time, display });
+      const input = { code, totalRupees: Number(total), months: n, ratePct: Number(ratePct), incrementRupees: Number(step), openTime: time, display };
+      const r = edit ? await updateChitAction(edit.chitId, input) : await createChitAction(input);
       if (r && !r.ok) setServerError(r.error);
     });
   };
@@ -60,7 +74,7 @@ export function NewChitForm({ suggestedCode, usedCodes }: { suggestedCode: strin
         className="card flex flex-col gap-5 p-5 sm:p-6"
       >
         <div>
-          <h1 className="font-display text-[24px] font-extrabold">{L("New chit", "புதிய சீட்டு")}</h1>
+          <h1 className="font-display text-[24px] font-extrabold">{edit ? L(`Edit chit ${v!.code}`, `சீட்டு ${v!.code} மாற்று`) : L("New chit", "புதிய சீட்டு")}</h1>
           <p className="text-[13.5px] text-ink-2">
             {L("Member IDs will be", "Member IDs")} <b className="text-ink">{shown}01, {shown}02…</b>
           </p>
@@ -117,19 +131,21 @@ export function NewChitForm({ suggestedCode, usedCodes }: { suggestedCode: strin
         </div>
 
         <AnimatePresence>
-          {(!preview.ok || serverError || codeError) && (
+          {(!preview.ok || serverError || formError) && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
               <div role="alert" className="rounded-xl bg-danger-soft px-3.5 py-2.5 text-[13.5px] font-semibold text-danger">
-                {err(serverError ?? codeError ?? (preview.ok ? "" : preview.code))}
+                {err(serverError ?? formError ?? (preview.ok ? "" : preview.code))}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <Button variant="gold" size="lg" type="submit" disabled={!preview.ok || !!codeError || pending} icon={<Sparkles size={18} />}>
-          {pending ? L("Creating…", "உருவாக்குகிறது…") : L("Create chit", "சீட்டு உருவாக்கு")}
+        <Button variant="gold" size="lg" type="submit" disabled={!preview.ok || !!formError || pending} icon={edit ? <Save size={18} /> : <Sparkles size={18} />}>
+          {edit ? (pending ? L("Saving…", "சேமிக்கிறது…") : L("Save changes", "மாற்றங்களைச் சேமி")) : pending ? L("Creating…", "உருவாக்குகிறது…") : L("Create chit", "சீட்டு உருவாக்கு")}
         </Button>
-        <p className="-mt-2 text-center text-[12px] text-ink-3">{L("Your own seat is added as the first ID. Terms can't change after the chit starts.", "உங்கள் இடம் முதல் ID-ஆக சேர்க்கப்படும். தொடங்கிய பின் விதிகள் மாறாது.")}</p>
+        <p className="-mt-2 text-center text-[12px] text-ink-3">{edit
+            ? L("Member IDs follow the new code. Terms can't change after the chit starts.", "Member IDs புதிய code-க்கு மாறும். தொடங்கிய பின் விதிகள் மாறாது.")
+            : L("Your own seat is added as the first ID. Terms can't change after the chit starts.", "உங்கள் இடம் முதல் ID-ஆக சேர்க்கப்படும். தொடங்கிய பின் விதிகள் மாறாது.")}</p>
       </motion.form>
 
       {/* live schedule, like the paper sheet */}

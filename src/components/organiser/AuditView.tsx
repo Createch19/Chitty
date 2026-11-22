@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { ArrowRightLeft, BadgeCheck, CalendarClock, Crown, Dices, Eye, FileUp, Gavel, HandCoins, IdCard, KeyRound, Link2, Link2Off, Play, Rocket, ShieldCheck, Trash2, Undo2, UserCog, XCircle } from "lucide-react";
+import { ArrowRightLeft, BadgeCheck, CalendarClock, Crown, Dices, Eye, FileUp, Gavel, HandCoins, IdCard, KeyRound, Link2, Link2Off, Pencil, Play, Rocket, ShieldCheck, Trash2, Undo2, UserCog, XCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import { cx } from "@/components/ui/kit";
 import { formatINR } from "@/domain/money";
@@ -62,6 +62,11 @@ export function AuditView({ group, before, data }: { group: AuditGroup; before?:
         return { icon: <Link2Off size={16} />, tone: "warn", text: L(`Link stopped for ${seat(d.seatId)}`, `${seat(d.seatId)} link நிறுத்தப்பட்டது`) };
       case "chit.create":
         return { icon: <Rocket size={16} />, text: L(`Chit created`, `சீட்டு உருவாக்கப்பட்டது`) };
+      case "chit.edit": {
+        const to = d.to as { code?: string } | undefined;
+        const from = d.from as { code?: string } | undefined;
+        return { icon: <Pencil size={16} />, text: L(`Chit ${from?.code ?? ""} edited before start${to?.code && to.code !== from?.code ? ` (now ${to.code})` : ""}`, `சீட்டு ${from?.code ?? ""} தொடங்கும் முன் மாற்றப்பட்டது${to?.code && to.code !== from?.code ? ` (இப்போது ${to.code})` : ""}`) };
+      }
       case "chit.delete":
         return { icon: <Trash2 size={16} />, tone: "warn", text: L(`Chit ${d.code} deleted before start (${d.seats} member IDs)`, `சீட்டு ${d.code} தொடங்கும் முன் நீக்கப்பட்டது (${d.seats} member IDs)`) };
       case "chit.start":

@@ -29,6 +29,7 @@ export function useErrorText() {
   const L = useL();
   return (code: string) =>
     ({
+      SEATS_ABOVE_MONTHS: L("Some member IDs are above the new number of months. Remove them first.", "புதிய மாத எண்ணிக்கையை விட அதிக எண் கொண்ட member IDs உள்ளன. முதலில் அவற்றை நீக்கவும்."),
       CHIT_FULL: L("Every seat is already filled.", "எல்லா இடங்களும் நிரம்பிவிட்டன."),
       CHIT_NOT_DRAFT: L("This chit has started; seats are fixed now.", "சீட்டு தொடங்கிவிட்டது; இடங்கள் இனி மாறாது."),
       CHIT_NOT_FULL: L("Fill every seat before starting.", "தொடங்கும் முன் எல்லா இடங்களையும் நிரப்பவும்."),

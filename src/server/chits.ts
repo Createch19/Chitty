@@ -4,7 +4,7 @@
  * and row locks (SELECT … FOR UPDATE on the month) serialise anything that changes a month.
  */
 import { randomInt } from "node:crypto";
-import { and, asc, count, desc, eq, inArray, isNotNull, lt, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, lt, ne, sql } from "drizzle-orm";
 import type { DB, Tx } from "@/db/client";
 import { auditLog, bid, chit, memberLink, month, organiser, payment, payout, pushSubscription, roomJoin, seat } from "@/db/schema";
 import { withOrganiser } from "@/db/tenant";
@@ -124,6 +124,34 @@ export async function createChit(db: DB, orgId: string, input: NewChit): Promise
     await tx.insert(seat).values({ organiserId: orgId, chitId: c.id, number: 1, name: me.name, phone: me.mobile, isOrganiser: true });
     await audit(tx, orgId, { kind: "organiser", id: orgId }, "chit.create", { chitId: c.id, code, ...terms });
     return c.id;
+  });
+}
+
+/** Draft only: change the code, terms, open time or what members see. Member IDs follow the new code. */
+export async function updateChit(db: DB, orgId: string, chitId: string, input: NewChit & { code: string }) {
+  let terms: Terms;
+  try {
+    terms = makeTerms(input);
+  } catch (e) {
+    if (e instanceof MoneyError) throw new ChitError(e.code);
+    throw e;
+  }
+  const openTime = input.openTime ?? "09:00";
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(openTime)) throw new ChitError("INVALID_TIME");
+  const code = input.code.trim().toUpperCase();
+  if (!isChitCode(code)) throw new ChitError("INVALID_CODE");
+  return withOrganiser(db, orgId, async (tx) => {
+    const c = await draftChit(tx, chitId);
+    const used = (await tx.select({ code: chit.code }).from(chit).where(ne(chit.id, chitId))).map((r) => r.code);
+    if (used.includes(code)) throw new ChitError("CODE_TAKEN");
+    const numbers = (await tx.select({ n: seat.number }).from(seat).where(eq(seat.chitId, chitId))).map((r) => r.n);
+    if (numbers.some((n) => n > terms.months)) throw new ChitError("SEATS_ABOVE_MONTHS");
+    const display = input.display ?? c.display;
+    await tx
+      .update(chit)
+      .set({ code, totalPaise: terms.totalPaise, months: terms.months, rateBps: terms.rateBps, incrementPaise: terms.incrementPaise, openTime, display })
+      .where(eq(chit.id, chitId));
+    await audit(tx, orgId, { kind: "organiser", id: orgId }, "chit.edit", { chitId, from: { code: c.code, totalPaise: c.totalPaise, months: c.months, rateBps: c.rateBps, incrementPaise: c.incrementPaise, openTime: c.openTime, display: c.display }, to: { code, ...terms, openTime, display } });
   });
 }
 

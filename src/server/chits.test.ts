@@ -22,6 +22,7 @@ import {
   runLottery,
   setPaid,
   startChit,
+  updateChit,
   undoPayout,
 } from "./chits";
 import { istNow, tick } from "./scheduler";
@@ -323,5 +324,41 @@ describe("delete a chit before it starts", () => {
     const id = await fullDraft("DS");
     await startChit(h.db, org, id, "2027-01-10", at("2026-12-01"));
     await expect(deleteChit(h.db, org, id)).rejects.toThrow("CHIT_NOT_DRAFT");
+  });
+});
+
+describe("edit a chit before it starts", () => {
+  const base = { totalRupees: 100000, months: 10, code: "ED" };
+
+  it("changes code and terms; member IDs follow the new code; audited", async () => {
+    const id = await createChit(h.db, org, base);
+    await addSeat(h.db, org, id, { name: "Selvi", phone: "9840011111" });
+    await expect(updateChit(h.db, otherOrg, id, { ...base, code: "EX" })).rejects.toThrow("CHIT_NOT_FOUND");
+    await updateChit(h.db, org, id, { code: "edt2", totalRupees: 240000, months: 12, ratePct: 2, incrementRupees: 1000, openTime: "10:30", display: "name" });
+    const d = await getChitDetail(h.db, org, id);
+    expect(d.chit).toMatchObject({ code: "EDT2", openTime: "10:30", display: "name" });
+    expect(d.chit.terms).toMatchObject({ totalPaise: R(240000), months: 12, rateBps: 200, incrementPaise: R(1000) });
+    expect(d.seats.map((x) => x.code)).toEqual(["EDT201", "EDT202"]);
+    const rows = await h.db.select().from(auditLog).where(eq(auditLog.action, "chit.edit"));
+    expect(rows.at(-1)?.details).toMatchObject({ chitId: id, from: { code: "ED", months: 10 }, to: { code: "EDT2", months: 12 } });
+    // keeping its own code is fine
+    await updateChit(h.db, org, id, { code: "EDT2", totalRupees: 240000, months: 12 });
+  });
+
+  it("refuses a taken or bad code, bad terms, and months below an added member ID", async () => {
+    const id = await createChit(h.db, org, { ...base, code: "EF" });
+    await expect(updateChit(h.db, org, id, { ...base, code: "A" })).rejects.toThrow("CODE_TAKEN");
+    await expect(updateChit(h.db, org, id, { ...base, code: "E-F" })).rejects.toThrow("INVALID_CODE");
+    await expect(updateChit(h.db, org, id, { ...base, code: "EF", openTime: "25:00" })).rejects.toThrow("INVALID_TIME");
+    await expect(updateChit(h.db, org, id, { ...base, code: "EF", months: 1 })).rejects.toThrow();
+    for (const n of ["Selvi", "Ravi", "Kumar"]) await addSeat(h.db, org, id, { name: n, phone: "9840011111" });
+    await expect(updateChit(h.db, org, id, { ...base, code: "EF", totalRupees: 120000, months: 3 })).rejects.toThrow("SEATS_ABOVE_MONTHS");
+    await updateChit(h.db, org, id, { ...base, code: "EF", totalRupees: 120000, months: 4 });
+  });
+
+  it("refuses once the chit has started", async () => {
+    const id = await fullDraft("EG");
+    await startChit(h.db, org, id, "2027-01-10", at("2026-12-01"));
+    await expect(updateChit(h.db, org, id, { ...base, code: "EG" })).rejects.toThrow("CHIT_NOT_DRAFT");
   });
 });

@@ -11,6 +11,7 @@ import {
   closeAuction,
   createChit,
   deleteChit,
+  updateChit,
   markPayout,
   openMonth,
   removeSeat,
@@ -44,6 +45,12 @@ async function run<T>(fn: (orgId: string) => Promise<T>): Promise<Result<T>> {
 export async function createChitAction(input: NewChit) {
   const r = await run(async (org) => createChit(await getDb(), org, input));
   if (r.ok) redirect(`/app/chits/${r.data}`);
+  return r;
+}
+
+export async function updateChitAction(chitId: string, input: NewChit & { code: string }) {
+  const r = await run(async (org) => updateChit(await getDb(), org, chitId, input));
+  if (r.ok) redirect(`/app/chits/${chitId}`);
   return r;
 }
 

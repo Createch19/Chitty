@@ -40,6 +40,11 @@ export function ChitPage({ d, links, today }: { d: ChitDetailData; links: Record
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <h1 className="font-display text-[20px] font-extrabold leading-tight sm:text-[24px]">{L(`Chit ${d.chit.code}`, `சீட்டு ${d.chit.code}`)}</h1>
               {d.chit.status === "draft" ? <Badge>{L("Draft", "வரைவு")}</Badge> : d.chit.status === "completed" ? <Badge tone="ok">{L("Completed", "முடிந்தது")}</Badge> : <Badge tone="gold">{L("Running", "நடக்கிறது")}</Badge>}
+              {d.chit.status === "draft" && (
+                <Link href={`/app/chits/${d.chit.id}/edit`} className="btn-ghost inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-[12px] font-semibold">
+                  <Pencil size={12} /> {L("Edit", "மாற்று")}
+                </Link>
+              )}
             </div>
             <div className="font-display gold-text tabular mt-1 whitespace-nowrap text-[20px] font-extrabold leading-none min-[400px]:text-[24px] sm:text-[30px]">{formatINR(t.totalPaise)}</div>
           </div>
