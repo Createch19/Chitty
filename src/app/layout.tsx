@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   title: { default: "Chitty", template: "%s · Chitty" },
   description: "Chit fund management with a live auction room.",
   icons: { apple: "/pwa-icon/180" },
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {
