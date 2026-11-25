@@ -13,7 +13,9 @@ async function Content() {
       {async (me) => {
         const chits = await listChits(await getDb(), me.id);
         const used = chits.map((c) => c.code);
-        return <NewChitForm suggestedCode={nextChitCode(used)} usedCodes={used} />;
+        const next = nextChitCode(used);
+        // keyed so a kept form starts fresh once the suggested code moves on
+        return <NewChitForm key={next} suggestedCode={next} usedCodes={used} />;
       }}
     </Shell>
   );

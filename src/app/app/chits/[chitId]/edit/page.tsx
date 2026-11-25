@@ -25,22 +25,26 @@ async function Content({ params }: { params: Promise<{ chitId: string }> }) {
         if (d.chit.status !== "draft") redirect(`/app/chits/${chitId}`); // terms are fixed once it starts
         const used = (await listChits(db, me.id)).map((c) => c.code).filter((c) => c !== d.chit.code);
         const t = d.chit.terms;
+        const values = {
+          code: d.chit.code,
+          totalRupees: t.totalPaise / 100,
+          months: t.months,
+          ratePct: t.rateBps / 100,
+          incrementRupees: t.incrementPaise / 100,
+          openTime: d.chit.openTime,
+          display: d.chit.display === "name" ? ("name" as const) : ("id" as const),
+        };
+        // The router keeps this page's form state after leaving it. Keyed by the saved values, the form starts
+        // again whenever they change, so it never shows (or saves back) what was there before the last save.
         return (
           <NewChitForm
+            key={JSON.stringify(values)}
             suggestedCode={d.chit.code}
             usedCodes={used}
             edit={{
               chitId,
               topSeat: Math.max(0, ...d.seats.map((s) => s.number)),
-              values: {
-                code: d.chit.code,
-                totalRupees: t.totalPaise / 100,
-                months: t.months,
-                ratePct: t.rateBps / 100,
-                incrementRupees: t.incrementPaise / 100,
-                openTime: d.chit.openTime,
-                display: d.chit.display === "name" ? "name" : "id",
-              },
+              values,
             }}
           />
         );
