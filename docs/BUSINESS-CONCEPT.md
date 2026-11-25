@@ -34,6 +34,8 @@ seat without a discount. Members pay within 10 days of the auction. The winner i
 - **Disabling an organiser pauses everything of theirs.** Their login stops. Member links show
   "Service temporarily paused". Auctions don't open and no notifications go out.
   Nothing is deleted, and re-enabling continues exactly where it stopped.
+- **Delete company** (Super Admin): removes a **paused** organiser with all its data, for good. The Super Admin types the
+  business name and their own password. Only a platform audit row with counts stays; old database backups still hold the data.
 - **Branding:** each organiser has a **business name** (e.g. "Sri Murugan Chits"), set by the Super Admin.
   Members see it at the top of their app and in every notification. "Chitty" appears small at the bottom.
 - **Pricing and billing for organisers are handled offline.** There is nothing about money between the owner and organisers in the app.

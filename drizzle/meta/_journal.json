@@ -50,6 +50,13 @@
       "when": 1795616254386,
       "tag": "0006_member_pin",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795617958141,
+      "tag": "0007_purge_organiser",
+      "breakpoints": true
     }
   ]
 }

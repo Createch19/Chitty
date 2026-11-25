@@ -9,6 +9,7 @@ import { getDb } from "@/db/client";
 import {
   AccountError,
   createOrganiser,
+  deleteOrganiser,
   resetOrganiserPassword,
   setOrganiserActive,
   updateOrganiser,
@@ -46,4 +47,10 @@ export async function setOrganiserActiveAction(id: string, active: boolean) {
 
 export async function resetPasswordAction(id: string) {
   return run(async (adminId) => resetOrganiserPassword(await getDb(), adminId, id));
+}
+
+export async function deleteOrganiserAction(id: string, input: { name: string; password: string }) {
+  return run(async (adminId) => {
+    await deleteOrganiser(await getDb(), adminId, id, input);
+  });
 }

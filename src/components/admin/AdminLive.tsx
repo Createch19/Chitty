@@ -1,9 +1,9 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { Building2, Copy, KeyRound, Lock, LogOut, Pencil, Plus, Power, ShieldCheck, Ticket, Users, Wand2, X } from "lucide-react";
+import { Building2, Copy, KeyRound, Lock, LogOut, Pencil, Plus, Power, ShieldCheck, Ticket, Trash2, Users, Wand2, X } from "lucide-react";
 import { useState, useTransition, type ReactNode } from "react";
-import { createOrganiserAction, resetPasswordAction, setOrganiserActiveAction, updateOrganiserAction, type ActionResult } from "@/app/actions/admin";
+import { createOrganiserAction, deleteOrganiserAction, resetPasswordAction, setOrganiserActiveAction, updateOrganiserAction, type ActionResult } from "@/app/actions/admin";
 import { logout } from "@/app/actions/auth";
 import { LangToggle, Logo, ThemeToggle } from "@/components/brand";
 import { Badge, Button, Portal, ConfirmDialog, CountUp, cx, useToast } from "@/components/ui/kit";
@@ -40,11 +40,17 @@ export function AdminLive({ admin, organisers }: { admin: { name: string; mobile
   const [confirm, setConfirm] = useState<{ kind: "toggle" | "reset"; org: OrgRow } | null>(null);
   const [temp, setTemp] = useState<{ org: OrgRow; pw: string } | null>(null);
 
+  const [del, setDel] = useState<OrgRow | null>(null);
+
   const errText = (code: string) =>
     ({
       MOBILE_TAKEN: L("Another organiser already uses this mobile number.", "இந்த mobile எண் வேறு organiser-க்கு உள்ளது."),
       INVALID_MOBILE: L("Enter a 10-digit Indian mobile number.", "10 இலக்க mobile எண் கொடுக்கவும்."),
       PASSWORD_TOO_SHORT: L("Password needs at least 8 characters.", "Password குறைந்தது 8 எழுத்துகள்."),
+      WRONG_PASSWORD: L("Wrong Super Admin password.", "Super Admin password தவறு."),
+      LOCKED: L("Too many wrong passwords. Try again in 15 minutes.", "பல முறை தவறான password. 15 நிமிடம் கழித்து முயலவும்."),
+      PAUSE_FIRST: L("Pause this company first.", "முதலில் இந்த company-ஐ நிறுத்தவும்."),
+      NAME_MISMATCH: L("The name doesn't match.", "பெயர் பொருந்தவில்லை."),
       NOT_FOUND: L("This organiser no longer exists.", "இந்த organiser இல்லை."),
     })[code] ?? L("Please check the details.", "விவரங்களை சரிபார்க்கவும்.");
 
@@ -139,6 +145,11 @@ export function AdminLive({ admin, organisers }: { admin: { name: string; mobile
                     <IconBtn label={L("Reset password", "Password reset")} onClick={() => setConfirm({ kind: "reset", org: o })}>
                       <KeyRound size={16} />
                     </IconBtn>
+                    {!o.active && (
+                      <button aria-label={L("Delete company", "Company நீக்கு")} title={L("Delete company", "Company நீக்கு")} onClick={() => setDel(o)} className="grid h-10 w-10 place-items-center rounded-xl border border-line text-danger">
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                     <button
                       aria-label={o.active ? L("Pause", "நிறுத்து") : L("Enable", "இயக்கு")}
                       onClick={() => setConfirm({ kind: "toggle", org: o })}
@@ -221,6 +232,29 @@ export function AdminLive({ admin, organisers }: { admin: { name: string; mobile
         )}
       </Modal>
 
+      {/* delete company */}
+      <Modal open={del != null} onClose={() => setDel(null)}>
+        {del && (
+          <DeleteForm
+            key={del.id}
+            org={del}
+            pending={pending}
+            onCancel={() => setDel(null)}
+            onSubmit={(input) =>
+              new Promise<string | null>((resolve) =>
+                start(async () => {
+                  const r = await deleteOrganiserAction(del.id, input);
+                  if (!r.ok) return resolve(errText(r.error));
+                  setDel(null);
+                  toast(L(`${del.businessName} deleted`, `${del.businessName} நீக்கப்பட்டது`), "ok");
+                  resolve(null);
+                }),
+              )
+            }
+          />
+        )}
+      </Modal>
+
       {/* create / edit */}
       <Modal open={sheet != null} onClose={() => setSheet(null)}>
         {sheet && (
@@ -245,6 +279,53 @@ export function AdminLive({ admin, organisers }: { admin: { name: string; mobile
         )}
       </Modal>
     </div>
+  );
+}
+
+function DeleteForm({ org, pending, onCancel, onSubmit }: { org: OrgRow; pending: boolean; onCancel: () => void; onSubmit: (d: { name: string; password: string }) => Promise<string | null> }) {
+  const L = useL();
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const ready = name.trim() === org.businessName.trim() && password !== "" && !pending;
+  return (
+    <form
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (!ready) return;
+        const err = await onSubmit({ name, password });
+        setError(err);
+        if (err) setPassword("");
+      }}
+    >
+      <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-danger-soft text-danger">
+        <Trash2 size={26} />
+      </span>
+      <h3 className="font-display mt-3 text-center text-[19px] font-bold">{L(`Delete ${org.businessName}?`, `${org.businessName}-ஐ நீக்கலாமா?`)}</h3>
+      <p className="mt-2 text-center text-[13.5px] text-ink-2">
+        {L(`All its data goes: ${org.chits} chits, ${org.ids} member IDs, Aadhaar, bids, payments, links and audit log. This can't be undone.`, `எல்லா data-வும் போகும்: ${org.chits} சீட்டு, ${org.ids} member IDs, Aadhaar, ஏலங்கள், கட்டணங்கள், links, audit log. திரும்ப எடுக்க முடியாது.`)}
+      </p>
+      <div className="mt-4 flex flex-col gap-3">
+        <Input label={L(`Type the name: ${org.businessName}`, `பெயரை type செய்யவும்: ${org.businessName}`)} value={name} onChange={setName} />
+        <label className="block">
+          <span className="text-[12.5px] font-semibold text-ink-2">{L("Your Super Admin password", "உங்கள் Super Admin password")}</span>
+          <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 h-12 w-full rounded-2xl border border-line-2 bg-[color-mix(in_oklab,var(--ink)_3%,transparent)] px-4 text-[15px] outline-none focus:border-danger" />
+        </label>
+      </div>
+      {error && (
+        <div role="alert" className="mt-4 rounded-xl bg-danger-soft px-3.5 py-2.5 text-[13.5px] font-semibold text-danger">
+          {error}
+        </div>
+      )}
+      <div className="mt-5 grid grid-cols-2 gap-3">
+        <Button type="button" size="lg" onClick={onCancel}>
+          {L("Cancel", "வேண்டாம்")}
+        </Button>
+        <Button type="submit" variant="danger" size="lg" disabled={!ready}>
+          {pending ? L("Deleting…", "நீக்குகிறது…") : L("Delete all", "எல்லாம் நீக்கு")}
+        </Button>
+      </div>
+    </form>
   );
 }
 

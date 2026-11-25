@@ -12,7 +12,7 @@ import { promisify } from "node:util";
 import { and, count, desc, eq, gt, gte, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { DB } from "@/db/client";
-import { auditLog, loginAttempt, organiser, session, superAdmin } from "@/db/schema";
+import { auditLog, bid, chit, loginAttempt, memberLink, month, notification, organiser, payment, payout, pushSubscription, roomJoin, seat, session, superAdmin } from "@/db/schema";
 
 const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number, opts: object) => Promise<Buffer>;
 
@@ -244,6 +244,37 @@ export async function setOrganiserActive(db: DB, adminId: string, id: string, ac
   if (!r.length) throw new AccountError("NOT_FOUND");
   if (!active) await revokeAll(db, "organiser", id);
   await audit(db, adminId, active ? "organiser.enable" : "organiser.disable", id, {});
+}
+
+/**
+ * Delete a company and everything it owns: chits, members, Aadhaar, bids, payments, links, messages, audit trail.
+ * Can't be undone (only a database backup has it). Needs: the company paused first, its exact name typed, and the
+ * Super Admin's own password again. One platform audit row (counts only) stays.
+ */
+export async function deleteOrganiser(db: DB, adminId: string, id: string, input: { name: string; password: string }, now = new Date()) {
+  const [admin] = await db.select({ mobile: superAdmin.mobile, hash: superAdmin.passwordHash }).from(superAdmin).where(eq(superAdmin.id, adminId));
+  if (!admin) throw new AccountError("NOT_FOUND");
+  const key = `admin:${admin.mobile}`;
+  if (await tooMany(db, key, MAX_PER_MOBILE, now)) throw new AccountError("LOCKED");
+  if (!(await verifyPassword(String(input.password ?? ""), admin.hash))) {
+    await db.insert(loginAttempt).values({ key, at: now });
+    throw new AccountError("WRONG_PASSWORD");
+  }
+  return db.transaction(async (tx) => {
+    const [o] = await tx.select().from(organiser).where(eq(organiser.id, id)).for("update");
+    if (!o) throw new AccountError("NOT_FOUND");
+    if (o.active) throw new AccountError("PAUSE_FIRST");
+    if (String(input.name ?? "").trim() !== o.businessName.trim()) throw new AccountError("NAME_MISMATCH");
+    const seats = await tx.select({ id: seat.id }).from(seat).where(eq(seat.organiserId, id));
+    const [{ n: chits }] = await tx.select({ n: count() }).from(chit).where(eq(chit.organiserId, id));
+    await tx.execute(sql`select set_config('app.purge_organiser', ${id}, true)`); // this transaction only: see 0007
+    for (const t of [notification, pushSubscription, roomJoin, memberLink, payout, payment, bid, month, seat, chit, auditLog]) await tx.delete(t).where(eq(t.organiserId, id));
+    await tx.delete(session).where(and(eq(session.kind, "organiser"), eq(session.subjectId, id)));
+    await tx.delete(loginAttempt).where(eq(loginAttempt.key, `organiser:${o.mobile}`));
+    await tx.delete(organiser).where(eq(organiser.id, id));
+    await tx.insert(auditLog).values({ actorKind: "admin", actorId: adminId, action: "organiser.delete", organiserId: null, details: { id, businessName: o.businessName, chits, ids: seats.length } });
+    return { chits, ids: seats.length };
+  });
 }
 
 /** Returns a one-time password to give the organiser; they must change it at next login. */
