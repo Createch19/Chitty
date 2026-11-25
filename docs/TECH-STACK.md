@@ -68,7 +68,8 @@ The business rules are in [BUSINESS-CONCEPT.md](BUSINESS-CONCEPT.md); where the 
   - 118 Vitest tests (18 new).
 - **Local database:** without `DATABASE_URL` the app uses **PGlite**, an embedded PostgreSQL 17 kept in `./.data/pglite`.
   It needs no install and no password. Production uses real PostgreSQL through `DATABASE_URL`, with the same migrations.
-  **Not yet run against a real PostgreSQL server; do this before deploy (Phase 6).**
+  **Run against a real PostgreSQL 17 server on 2026-11-21** (the 120 tests of that day; `CHITTY_TEST_PG=<server url> npx vitest run`,
+  with role `chitty_app` created first). Production runs on PostgreSQL 16; the test suite has not been run on 16.
 - `drizzle-kit` (a dev-only tool) pulls an old esbuild with a moderate advisory about esbuild's dev server.
   It is not used and not shipped.
 
@@ -91,7 +92,7 @@ The business rules are in [BUSINESS-CONCEPT.md](BUSINESS-CONCEPT.md); where the 
 |---|---|---|
 | Runtime | Node.js 24 LTS | Supported until April 2028. Exact version pinned in `.nvmrc` and the Dockerfile. |
 | App | Next.js (App Router), TypeScript strict | `output: "standalone"` for a small image. One container serves the UI, the API and SSE. |
-| Database | PostgreSQL 17, a Coolify database resource | Internal network only. |
+| Database | PostgreSQL 16, a Coolify database resource | Internal network only. |
 | ORM / migrations | Drizzle ORM + drizzle-kit | Migrations run automatically on container start. |
 | Validation | Zod | The same schemas on the server and in forms. Every input is checked on the server. |
 | UI | Tailwind CSS + shadcn/ui (Radix) | One design system (Phase 0). |
@@ -139,7 +140,7 @@ The business rules are in [BUSINESS-CONCEPT.md](BUSINESS-CONCEPT.md); where the 
   - Jobs are idempotent with "done" markers, so a restart or missed minute catches up safely.
 - **Time:** timestamps are `timestamptz` (UTC). All calendar logic (auction day, last day to pay) uses **Asia/Kolkata**.
   The server's clock is the only clock.
-- **Aadhaar:** AES-256-GCM with `AADHAAR_KEY` from the environment. The DB stores iv, ciphertext, tag and key version.
+- **Aadhaar:** AES-256-GCM with `CHITTY_AADHAAR_KEY` from the environment. The DB stores iv, ciphertext, tag and key version.
   Input is checked with the Verhoeff checksum, and every Show is audited.
 - **Audit log:** append-only (a trigger blocks UPDATE and DELETE). It records who, what, when and details for:
   - bids (accepted and rejected), close, lottery (the full draw list and the pick);
@@ -149,24 +150,25 @@ The business rules are in [BUSINESS-CONCEPT.md](BUSINESS-CONCEPT.md); where the 
 
 ## 4. Deploy (Coolify)
 
-- Code lives in a new **private GitHub repo `chitty`** (created only after the owner's OK).
-  Coolify deploys from it automatically on push to `main`.
+- Code lives in the **private GitHub repo `Createch19/Chitty`**, branch `main`.
+  Auto-deploy on push is not confirmed: on 2026-11-22 the pushed commits went live only after a manual **Redeploy**.
 - **App:**
   - Dockerfile build, port 3000, health check `GET /api/health`.
   - **Memory limit 512 MB**, reservation 256 MB.
   - Domain https://chitty.creaitechnology.com.
-- **PostgreSQL 17:** a Coolify resource with a **nightly backup kept on the server**
-  (14-day retention). Off-server copies to Cloudflare R2 can be added later.
+- **PostgreSQL 16:** the owner's existing Coolify resource, database `chitty` (the app creates it on first start).
+  Backup of `chitty` set up in Coolify on 2026-11-25 (14-day retention intended, local only). One manual run restored cleanly into a scratch
+  PostgreSQL 16.16 that day. The nightly run itself is not confirmed yet. Off-server copies to Cloudflare R2 can be added later.
 - **Environment (Coolify secrets, never in git):**
-  - `DATABASE_URL`, `AADHAAR_KEY`
+  - `DATABASE_URL`, `CHITTY_AADHAAR_KEY`
   - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`
   - `SUPERADMIN_MOBILE`, `SUPERADMIN_PASSWORD`
   - `APP_URL`, `TZ=Asia/Kolkata`
-- **`AADHAAR_KEY` must also be kept by the owner** in a password manager. Losing it loses every Aadhaar number.
+- **`CHITTY_AADHAAR_KEY` must also be kept by the owner** in a password manager. Losing it loses every Aadhaar number.
 - **Release:**
   1. All tests pass on the Mac.
   2. Push to `main`.
-  3. Coolify builds, migrates and starts.
+  3. Press **Redeploy** in Coolify if it has not started by itself; it builds and starts, and the app migrates.
   4. Check `/api/health`.
   5. Do a quick smoke test with the **Demo organiser**.
 
@@ -182,7 +184,7 @@ Each phase ends with its tests passing and a check-in with the owner.
 | **3. Members and live room** ✅ | Member links and WhatsApp share, PWA install guide, member app (account and schedule), live room over SSE with the bid box and every rule, auction-room animations. | Playwright: 20 parallel members, same-moment bids, reconnect, link revoke, arrears and leader blocks. |
 | **4. Notifications** ✅ (phone check pending) | Web Push: open, date change, closed summary, 2-day reminder, receipt and correction. WhatsApp backup buttons, per-user language. | Push verified on a real Android phone. |
 | **5. Reports, import, transfer, Aadhaar** ✅ | 5 reports with CSV and print, Excel import with template, preview and errors, seat transfer, encrypted Aadhaar with audited Show, audit log viewer. | A real paper chit imports cleanly. |
-| **6. Deploy** | Dockerfile, private GitHub repo, Coolify app, PostgreSQL, secrets, limits, health check, nightly backup, domain and HTTPS, Super Admin seed, Demo organiser. | The live site works on the phone. |
+| **6. Deploy** (live since 2026-11-21; restore tested 2026-11-25; key backup done and home-screen app checked on iPhone, per the owner; nightly run, Edit and push on phone, Demo organiser not confirmed) | Dockerfile, private GitHub repo, Coolify app, PostgreSQL, secrets, limits, health check, nightly backup, domain and HTTPS, Super Admin seed, Demo organiser. | The live site works on the phone. |
 | **7. Dry run and hardening** | A full simulated chit with the Demo organiser, a security review, fixes. | The owner signs off on using it for real chits. |
 
 ## 6. The phase-1 SQLite prototype
