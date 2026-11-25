@@ -3,7 +3,7 @@
 import confetti from "canvas-confetti";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, Crown, Dices, Gavel, Lock, Trophy, Users, Wifi, WifiOff, Zap } from "lucide-react";
+import { ArrowLeft, Crown, Dices, Gavel, KeyRound, Lock, Trophy, Users, Wifi, WifiOff, Zap } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { memberBidAction, memberJoinAction } from "@/app/actions/member";
 import { LangToggle } from "@/components/brand";
@@ -27,6 +27,9 @@ export function LiveRoom({ token, initial }: { token: string; initial: RoomSnaps
   const [online, setOnline] = useState(true);
   const [draft, setDraft] = useState<string | null>(null);
   const [overlay, setOverlay] = useState(false);
+  const [pin, setPin] = useState<string | null>(null); // kept in memory only, once the server accepted it
+  const [ask, setAsk] = useState<{ value: string; error: string | null } | null>(null);
+  const autoAmount = useRef(false); // the PIN dialog froze an untouched amount
   const [pending, start] = useTransition();
   const seen = useRef({ bids: initial.bids.length, joined: new Set(initial.seats.filter((s) => s.joined).map((s) => s.n)), status: initial.month.status });
 
@@ -93,21 +96,44 @@ export function LiveRoom({ token, initial }: { token: string; initial: RoomSnaps
       ALREADY_LEADING: L("You are already leading", "நீங்கள் ஏற்கனவே முன்னிலை"),
       HAS_ARREARS: L("Pay your arrears to bid", "பாக்கி கட்டினால் தான் ஏலம்"),
       AUCTION_NOT_OPEN: L("The auction is closed", "ஏலம் முடிந்தது"),
+      PIN_NEEDED: L("Enter your 6-digit PIN to bid", "ஏலம் கேட்க 6 இலக்க PIN போடுங்கள்"),
+      PIN_NOT_SET: L("No PIN yet. Ask the organiser for your PIN.", "இன்னும் PIN இல்லை. நடத்துநரிடம் PIN கேளுங்கள்."),
+      PIN_WRONG: L("Wrong PIN", "PIN தவறு"),
+      PIN_LOCKED: L("Too many wrong PINs. Try again in 15 minutes or call the organiser.", "பல முறை தவறான PIN. 15 நிமிடம் கழித்து முயலவும் அல்லது நடத்துநரை அழைக்கவும்."),
       TOO_FAST: L("Slow down a little", "கொஞ்சம் மெதுவாக"),
       PAUSED: L("Service is paused", "சேவை நிறுத்தப்பட்டுள்ளது"),
       LINK_INVALID: L("This link no longer works", "இந்த link இனி வேலை செய்யாது"),
     })[code] ?? L("Could not place the bid", "ஏலம் பதிவாகவில்லை");
 
   const submit = () => {
-    if (!canBid || problem) return;
+    if (!canBid || problem || pending) return;
+    if (pin) send(pin);
+    else {
+      // hold the amount still while the PIN is typed, even if others bid meanwhile
+      autoAmount.current = draft == null;
+      setDraft(String(amount));
+      setAsk({ value: "", error: null });
+    }
+  };
+  const closeAsk = () => {
+    setAsk(null);
+    if (autoAmount.current) setDraft(null);
+  };
+  const send = (p: string) =>
     start(async () => {
-      const r = await memberBidAction(token, m.id, amount);
+      const r = await memberBidAction(token, m.id, amount, p);
+      if (!r.ok && ["PIN_NEEDED", "PIN_NOT_SET", "PIN_WRONG", "PIN_LOCKED"].includes(r.error)) {
+        setPin(null);
+        setAsk({ value: "", error: errText(r.error) });
+        return;
+      }
+      setPin(p);
+      setAsk(null);
       if (r.ok) {
         setDraft(null);
         toast(L(`Bid placed: ${formatINR(amount * 100)}`, `ஏலம் பதிவானது: ${formatINR(amount * 100)}`), "gold");
       } else toast(errText(r.error, r.minPaise), "warn");
     });
-  };
   const join = () =>
     start(async () => {
       const r = await memberJoinAction(token, m.id);
@@ -285,6 +311,52 @@ export function LiveRoom({ token, initial }: { token: string; initial: RoomSnaps
           </div>
         </section>
       </div>
+
+      <Portal><AnimatePresence>
+        {ask && (
+          <motion.div className="theme-stage fixed inset-0 z-50 flex items-start justify-center p-3 pt-[12vh] sm:items-center sm:pt-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <div className="absolute inset-0 bg-[rgba(5,4,10,.75)] backdrop-blur-sm" onClick={closeAsk} />
+            <motion.form
+              role="dialog"
+              aria-modal="true"
+              aria-label={L("Enter your PIN", "PIN போடுங்கள்")}
+              className="card-solid relative w-full max-w-sm p-6 text-ink"
+              initial={{ y: 30, scale: 0.96, opacity: 0 }}
+              animate={{ y: 0, scale: 1, opacity: 1 }}
+              exit={{ y: 20, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 420, damping: 32 }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (canBid && !problem && !pending && ask.value.length === 6) send(ask.value);
+              }}
+            >
+              <div className="gold-fill mx-auto grid h-14 w-14 place-items-center rounded-full"><KeyRound size={26} /></div>
+              <h3 className="font-display mt-3 text-center text-[19px] font-bold">{L(`PIN to bid ${formatINR(amount * 100)}`, `${formatINR(amount * 100)} ஏலம் கேட்க PIN`)}</h3>
+              <p className="mt-1 text-center text-[13px] text-ink-2">{L("The 6-digit PIN your organiser sent you.", "நடத்துநர் உங்களுக்கு அனுப்பிய 6 இலக்க PIN.")}</p>
+              <input
+                autoFocus
+                type="password"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={6}
+                aria-label="PIN"
+                value={ask.value}
+                onChange={(e) => setAsk({ value: e.target.value.replace(/\D/g, "").slice(0, 6), error: null })}
+                className={cx("font-display mt-4 h-14 w-full rounded-2xl border bg-[rgba(0,0,0,.28)] text-center text-[28px] font-bold tracking-[.35em] outline-none", ask.error ? "border-danger" : "border-line-2 focus:border-gold-3")}
+              />
+              {(ask.error || problem || !canBid) && (
+                <div role="alert" className="mt-3 rounded-xl bg-danger-soft px-3 py-2 text-center text-[13px] font-semibold text-danger">
+                  {ask.error ?? (canBid ? L("The price has moved. Close this and choose a new amount.", "ஏலத்தொகை மாறிவிட்டது. மூடிவிட்டு புதிய தொகை போடுங்கள்.") : status.text)}
+                </div>
+              )}
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <Button type="button" variant="ghost" size="lg" onClick={closeAsk}>{L("Cancel", "வேண்டாம்")}</Button>
+                <Button type="submit" variant="gold" size="lg" disabled={pending || ask.value.length !== 6 || !!problem || !canBid}>{L("Bid", "ஏலம்")}</Button>
+              </div>
+            </motion.form>
+          </motion.div>
+        )}
+      </AnimatePresence></Portal>
 
       <Portal><AnimatePresence>
         {overlay && m.status === "closed" && m.winner != null && (

@@ -1,8 +1,9 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { Check, Copy, IdCard, Link2, Link2Off, MessageCircle, RefreshCw, X } from "lucide-react";
-import { useState, useTransition } from "react";
+import { Check, Circle, CircleCheck, Copy, IdCard, Link2, Link2Off, MessageCircle, RefreshCw, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
 import { issueLinkAction, revokeLinkAction } from "@/app/actions/chits";
 import { Badge, Button, Portal, ConfirmDialog, Sphere, cx, useToast } from "@/components/ui/kit";
 import { useL } from "@/lib/prefs";
@@ -16,7 +17,7 @@ type Seat = ChitDetailData["seats"][number];
  * Each member ID gets one secret link (BUSINESS-CONCEPT §10). Only its hash is stored, so the link can be
  * shown once; sending again makes a new link and the old one stops working.
  */
-export function MemberLinks({ d, links }: { d: ChitDetailData; links: Record<string, string> }) {
+export function MemberLinks({ d, links, connected }: { d: ChitDetailData; links: Record<string, string>; connected: string[] }) {
   const L = useL();
   const dt = useDateText();
   const err = useErrorText();
@@ -27,7 +28,15 @@ export function MemberLinks({ d, links }: { d: ChitDetailData; links: Record<str
   const [copied, setCopied] = useState(false);
   const [detail, setDetail] = useState<string | null>(null);
   const detailSeat = d.seats.find((s) => s.id === detail);
-  const sent = d.seats.filter((s) => links[s.id]).length;
+  const on = new Set(connected);
+  const joined = d.seats.filter((s) => on.has(s.id)).length;
+  const router = useRouter();
+
+  // keep the Connected status live while this page is in front
+  useEffect(() => {
+    const t = setInterval(() => document.visibilityState === "visible" && router.refresh(), 20_000);
+    return () => clearInterval(t);
+  }, [router]);
 
   const issue = (seat: Seat) =>
     start(async () => {
@@ -48,9 +57,9 @@ export function MemberLinks({ d, links }: { d: ChitDetailData; links: Record<str
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
         <div>
           <div className="font-display text-[17px] font-bold">{L("Members & links", "உறுப்பினர்கள் & links")}</div>
-          <div className="text-[12.5px] text-ink-3">{L("Tap an ID for Aadhaar and transfer. One private link per ID, sent on WhatsApp.", "Aadhaar, மாற்றம்: ID-ஐ தொடவும். ஒவ்வொரு ID-க்கும் ஒரு தனி link, WhatsApp-ல்.")}</div>
+          <div className="text-[12.5px] text-ink-3">{L("Connected = signed in with the PIN. Tap an ID for Aadhaar and transfer. Private link is optional.", "இணைந்தது = PIN போட்டு உள்ளே வந்தவர். Aadhaar, மாற்றம்: ID-ஐ தொடவும். தனி link விருப்பம்.")}</div>
         </div>
-        <Badge tone={sent === d.seats.length ? "ok" : "gold"}>{L(`${sent}/${d.seats.length} sent`, `${sent}/${d.seats.length} அனுப்பியது`)}</Badge>
+        <Badge tone={joined === d.seats.length ? "ok" : "gold"}>{L(`${joined}/${d.seats.length} connected`, `${joined}/${d.seats.length} இணைந்தது`)}</Badge>
       </div>
       <ul className="divide-y divide-line">
         {d.seats.map((s) => {
@@ -63,9 +72,14 @@ export function MemberLinks({ d, links }: { d: ChitDetailData; links: Record<str
                 <div className="text-[14px] font-semibold">
                   {s.code} <span className="font-normal text-ink-2">· {s.name}</span>
                 </div>
-                <div className={cx("flex items-center gap-1 text-[12px]", at ? "text-ok" : "text-ink-3")}>
-                  {at ? <Link2 size={12} /> : <Link2Off size={12} />}
-                  {at ? L(`Link active since ${dt(at.slice(0, 10))}`, `${dt(at.slice(0, 10))} முதல் link செயலில்`) : L("No link yet", "இன்னும் link இல்லை")}
+                <div className={cx("flex items-center gap-1 text-[12px]", on.has(s.id) ? "text-ok" : "text-ink-3")}>
+                  {on.has(s.id) ? <CircleCheck size={12} /> : <Circle size={12} />}
+                  {on.has(s.id) ? L("Connected", "இணைந்தது") : L("Not connected yet", "இன்னும் இணையவில்லை")}
+                  {at && (
+                    <span className="ml-1 inline-flex items-center gap-0.5 text-ink-3">
+                      · <Link2 size={11} /> {L(`private link ${dt(at.slice(0, 10))}`, `தனி link ${dt(at.slice(0, 10))}`)}
+                    </span>
+                  )}
                   {s.aadhaarLast4 && (
                     <span className="ml-1 inline-flex items-center gap-0.5 text-ink-3">
                       · <IdCard size={11} /> {s.aadhaarLast4}

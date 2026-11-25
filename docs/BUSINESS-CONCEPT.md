@@ -132,7 +132,9 @@ Members are notified, and that month's last payment day moves with it.
 - An ID that already won a month cannot bid.
 - An ID with **unpaid earlier months cannot bid**. It can watch the room.
   Once the organiser ticks those months Paid, it can bid the same day.
-- **Bids only through the member's own link.** The organiser cannot bid on anyone's behalf.
+- **Bids only through the member's own page.** The organiser cannot bid on anyone's behalf.
+- **A bid needs the member's fixed 6-digit PIN** (§10). Anyone holding a member's link can watch and join; the PIN is asked
+  once per room visit, before the first bid. 5 wrong PINs lock that connection's bidding for that ID for 15 minutes.
 - Month 1 and month n have no auction.
 
 **The bid box in the room:**
@@ -187,6 +189,11 @@ Members are notified, and that month's last payment day moves with it.
 - 1 seat = 1 member ID. Name and phone **do not have to be unique**; one person can hold many IDs.
 - Each ID gets its **own link, sent once when the chit starts**, by WhatsApp: the app prepares the
   message and the organiser taps Send. The link stays the same for the whole chit.
+- **Group link + PIN:** a chit has **one link for its WhatsApp group**. Each person has **one fixed random 6-digit PIN per chit**
+  (all their IDs under the same mobile share it); the organiser sends it privately, can show it again, or make a new one.
+  The member opens the group link, chooses the ID and types the PIN; the phone then remembers. Works before Start too.
+  An ID shows **Connected** only after a PIN sign-in, never just because a link was sent. A new PIN signs those phones out.
+  PINs are stored encrypted; every view of the PIN list and every wrong PIN is audited. Private links stay as an option.
 - **Transfer:** a seat can pass to a new person mid-chit. The ID stays the same and the name and phone change.
   The old link stops working and the new person gets a new link. All history is kept, and the transfer is audited.
 - **Aadhaar:** the full 12 digits are stored **encrypted**. They are checked with the Aadhaar checksum when typed,

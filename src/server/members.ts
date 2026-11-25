@@ -12,6 +12,7 @@ import { lastPayDate, nextValidBid } from "@/domain/rules";
 import { newToken, sha256 } from "./accounts";
 import { ChitError, joinRoom, placeBid, seatCode, termsOf } from "./chits";
 import { publish } from "./events";
+import { checkPin } from "./pins";
 
 export type Link = { linkId: string; organiserId: string; seatId: string; chitId: string };
 
@@ -47,14 +48,26 @@ async function openMonths(tx: Tx, chitId: string) {
   return (await tx.select({ id: month.id }).from(month).where(and(eq(month.chitId, chitId), eq(month.status, "open")))).map((m) => m.id);
 }
 
-/** Which seats of a chit have a working link (and since when). */
+/** Seats whose member signed in with the PIN on at least one phone (and since when). */
+export async function connectedSeats(db: DB, orgId: string, chitId: string) {
+  return withOrganiser(db, orgId, (tx) =>
+    tx
+      .select({ seatId: memberLink.seatId, since: sql<string>`min(${memberLink.createdAt})`.mapWith(String) })
+      .from(memberLink)
+      .innerJoin(seat, eq(seat.id, memberLink.seatId))
+      .where(and(eq(seat.chitId, chitId), eq(memberLink.kind, "device"), isNull(memberLink.revokedAt)))
+      .groupBy(memberLink.seatId),
+  );
+}
+
+/** Which seats of a chit have a working private link (and since when). */
 export async function linkStatus(db: DB, orgId: string, chitId: string) {
   return withOrganiser(db, orgId, (tx) =>
     tx
       .select({ seatId: memberLink.seatId, createdAt: memberLink.createdAt })
       .from(memberLink)
       .innerJoin(seat, eq(seat.id, memberLink.seatId))
-      .where(and(eq(seat.chitId, chitId), isNull(memberLink.revokedAt))),
+      .where(and(eq(seat.chitId, chitId), eq(memberLink.kind, "link"), isNull(memberLink.revokedAt))),
   );
 }
 
@@ -180,8 +193,9 @@ export async function memberJoin(db: DB, link: Link, monthId: string) {
   await joinRoom(db, link.organiserId, monthId, link.seatId);
 }
 
-export async function memberBid(db: DB, link: Link, monthId: string, amountRupees: number) {
-  if (!bidRateOk(link.seatId)) throw new ChitError("TOO_FAST");
+export async function memberBid(db: DB, link: Link, monthId: string, amountRupees: number, pin: string, ip = "local") {
   await memberRoom(db, link, monthId);
+  await checkPin(db, link, pin, ip, { monthId, amountRupees });
+  if (!bidRateOk(link.seatId)) throw new ChitError("TOO_FAST"); // after the PIN: a stranger can't use up the member's tries
   return placeBid(db, link.organiserId, monthId, link.seatId, amountRupees);
 }

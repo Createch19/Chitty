@@ -44,6 +44,17 @@ export function AuditView({ group, before, data }: { group: AuditGroup; before?:
         return { icon: <Gavel size={16} />, text: L(`Bid ${money(d.amountPaise)} by ${seat(d.seatId)} · ${mon(d.monthId)}`, `${seat(d.seatId)} ஏலம் ${money(d.amountPaise)} · ${mon(d.monthId)}`) };
       case "bid.reject":
         return { icon: <XCircle size={16} />, text: L(`Bid refused (${String(d.code ?? "")}) for ${seat(d.seatId)} · ${mon(d.monthId)}`, `ஏலம் மறுக்கப்பட்டது (${String(d.code ?? "")}) ${seat(d.seatId)} · ${mon(d.monthId)}`) };
+      case "pin.view":
+        return { icon: <Eye size={16} />, tone: "violet", text: L(`Member PINs shown · ${data.names.chits[String(d.chitId)] ?? ""}`, `உறுப்பினர் PIN பார்க்கப்பட்டது · ${data.names.chits[String(d.chitId)] ?? ""}`) };
+      case "pin.reset":
+        return { icon: <KeyRound size={16} />, text: L(`New PIN for ${seat(d.seatId)}`, `${seat(d.seatId)}-க்கு புதிய PIN`) };
+      case "pin.wrong":
+        return { icon: <XCircle size={16} />, tone: "warn", text: L(`Wrong PIN for ${seat(d.seatId)}`, `${seat(d.seatId)}-க்கு தவறான PIN`) };
+      case "link.device":
+        return { icon: <KeyRound size={16} />, text: L(`${seat(d.seatId)} joined with the PIN`, `${seat(d.seatId)} PIN போட்டு சேர்ந்தார்`) };
+      case "group.create":
+      case "group.renew":
+        return { icon: <Link2 size={16} />, text: L(`New group link · ${data.names.chits[String(d.chitId)] ?? ""}`, `புதிய group link · ${data.names.chits[String(d.chitId)] ?? ""}`) };
       case "seat.aadhaar_show":
         return { icon: <Eye size={16} />, tone: "violet", text: L(`Aadhaar shown for ${seat(d.seatId)} (XXXX ${d.last4})`, `${seat(d.seatId)} Aadhaar பார்க்கப்பட்டது (XXXX ${d.last4})`) };
       case "seat.aadhaar_set":

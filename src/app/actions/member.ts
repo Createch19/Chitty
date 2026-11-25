@@ -1,9 +1,13 @@
 "use server";
 
 /** Member actions. The link token is the credential; it is re-checked on every call. */
+import { cookies } from "next/headers";
 import { getDb } from "@/db/client";
+import { groupCookie } from "@/lib/group";
+import { joinWithPin, resolveGroup } from "@/server/pins";
 import { ChitError } from "@/server/chits";
 import { memberBid, memberJoin, resolveLink } from "@/server/members";
+import { clientIp } from "@/server/session";
 import { removeSubscription, saveSubscription, validSub } from "@/server/notify";
 
 export type MemberResult = { ok: true; nextMinPaise?: number } | { ok: false; error: string; minPaise?: number };
@@ -28,9 +32,9 @@ export async function memberJoinAction(token: string, monthId: string): Promise<
   });
 }
 
-export async function memberBidAction(token: string, monthId: string, amountRupees: number): Promise<MemberResult> {
+export async function memberBidAction(token: string, monthId: string, amountRupees: number, pin: string): Promise<MemberResult> {
   return withLink(token, async (db, link) => {
-    const r = await memberBid(db, link, monthId, amountRupees);
+    const r = await memberBid(db, link, monthId, amountRupees, pin, await clientIp());
     return { ok: true as const, nextMinPaise: r.nextMinPaise };
   });
 }
@@ -61,4 +65,22 @@ export async function memberUnsubscribeAction(tokens: string[], endpoint: string
     if (link && link !== "paused") await removeSubscription(db, link.organiserId, link.seatId, endpoint);
   }
   return { ok: true };
+}
+
+export type Joined = { token: string; code: string; business: string; seat: string; chosen: boolean };
+
+/** Group link + PIN: signs this phone in to the person's IDs. The cookie is only read by the group page. */
+export async function groupJoinAction(token: string, seatId: string, pin: string): Promise<{ ok: true; ids: Joined[] } | { ok: false; error: string }> {
+  const db = await getDb();
+  const g = await resolveGroup(db, token);
+  if (g === "paused") return { ok: false, error: "PAUSED" };
+  if (!g) return { ok: false, error: "LINK_INVALID" };
+  try {
+    const ids = await joinWithPin(db, g, seatId, pin, await clientIp());
+    (await cookies()).set(groupCookie(g.chitId), ids.find((x) => x.chosen)!.token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/c", maxAge: 400 * 86_400 });
+    return { ok: true, ids };
+  } catch (e) {
+    if (e instanceof ChitError) return { ok: false, error: e.code };
+    throw e;
+  }
 }

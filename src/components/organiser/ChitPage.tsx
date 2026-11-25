@@ -9,6 +9,7 @@ import { Badge, Button, Portal, ConfirmDialog, Ring, Sphere, cx, useToast } from
 import { formatINR } from "@/domain/money";
 import { useL } from "@/lib/prefs";
 import { useDateText, useErrorText } from "./common";
+import { GroupLinkCard } from "./GroupLinkCard";
 import { MemberLinks } from "./MemberLinks";
 
 export type ChitDetailData = {
@@ -19,7 +20,7 @@ export type ChitDetailData = {
 
 const fmtPhone = (p: string) => `${p.slice(0, 5)} ${p.slice(5)}`;
 
-export function ChitPage({ d, links, today }: { d: ChitDetailData; links: Record<string, string>; today: string }) {
+export function ChitPage({ d, links, connected, today }: { d: ChitDetailData; links: Record<string, string>; connected: string[]; today: string }) {
   const L = useL();
   const t = d.chit.terms;
   return (
@@ -71,7 +72,8 @@ export function ChitPage({ d, links, today }: { d: ChitDetailData; links: Record
       </motion.div>
 
       {d.chit.status === "draft" ? <Draft d={d} today={today} /> : <Running d={d} />}
-      {d.seats.length > 0 && d.chit.status !== "completed" && <MemberLinks d={d} links={links} />}
+      {d.seats.length > 0 && d.chit.status !== "completed" && <GroupLinkCard chitId={d.chit.id} chitCode={d.chit.code} />}
+      {d.seats.length > 0 && d.chit.status !== "completed" && <MemberLinks d={d} links={links} connected={connected} />}
     </div>
   );
 }

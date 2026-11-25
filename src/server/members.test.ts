@@ -2,16 +2,20 @@
  * Phase 3: member links, the member's views (privacy), 20 phones bidding at once, the live SSE stream,
  * reconnect, and link revoke.
  */
+import { randomBytes } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { createDb, type Handle } from "@/db/client";
-import { bid } from "@/db/schema";
+import { auditLog, bid, loginAttempt } from "@/db/schema";
 import { createOrganiser, setOrganiserActive } from "./accounts";
-import { addSeat, createChit, getChitDetail, openMonth, setPaid, startChit } from "./chits";
+import { addSeat, createChit, getChitDetail, openMonth, removeSeat, setPaid, startChit, updateSeat } from "./chits";
 import { listeners, publish } from "./events";
-import { bidRateOk, issueLink, linkStatus, memberBid, memberHome, memberJoin, memberRoom, resolveLink, revokeLink, type Link } from "./members";
+import { bidRateOk, connectedSeats, issueLink, linkStatus, memberBid, memberHome, memberJoin, memberRoom, resolveLink, revokeLink, type Link } from "./members";
+import { chitPins, groupToken, groupView, joinWithPin, resetPin, resolveGroup, type Group } from "./pins";
+import { transferSeat } from "./people";
 import { GET as memberEvents } from "@/app/api/m/[token]/rooms/[monthId]/events/route";
 
+process.env.CHITTY_AADHAAR_KEY = randomBytes(32).toString("base64");
 const ADMIN = "00000000-0000-0000-0000-000000000000";
 let h: Handle;
 let org: string;
@@ -23,6 +27,8 @@ const phones: string[] = [];
 const link = async (code: string) => (await resolveLink(h.db, tokens.get(code)!)) as Link;
 const month2 = () => d.months[1].id;
 const seat = (code: string) => d.seats.find((s) => s.code === code)!;
+const pins = new Map<string, string>(); // seat code → PIN
+const pin = (code: string) => pins.get(code)!;
 
 beforeAll(async () => {
   h = await createDb();
@@ -39,6 +45,7 @@ beforeAll(async () => {
   d = await getChitDetail(h.db, org, chitId);
   for (const s of d.seats) if (s.code !== "M01") await setPaid(h.db, org, d.months[0].id, s.id, true); // no arrears
   for (const s of d.seats) tokens.set(s.code, await issueLink(h.db, org, s.id));
+  for (const p of await chitPins(h.db, org, d.chit.id)) for (const c of p.codes) pins.set(c, p.pin);
   await openMonth(h.db, org, month2());
 }, 120_000);
 afterAll(() => h.close());
@@ -121,7 +128,7 @@ describe("20 phones in the live room", () => {
 
   it("19 different bids at the same moment: bids stay strictly rising and the highest accepted one leads", async () => {
     const codes = [...tokens.keys()].filter((c) => c !== "M01");
-    const res = await Promise.allSettled(codes.map(async (c, i) => memberBid(h.db, await link(c), month2(), 143000 + 500 * i)));
+    const res = await Promise.allSettled(codes.map(async (c, i) => memberBid(h.db, await link(c), month2(), 143000 + 500 * i, pin(c))));
     const ok = res.filter((r) => r.status === "fulfilled");
     expect(ok.length).toBeGreaterThanOrEqual(1);
     for (const r of res) if (r.status === "rejected") expect(["BID_TOO_LOW", "ALREADY_LEADING"]).toContain((r.reason as { code: string }).code);
@@ -136,8 +143,33 @@ describe("20 phones in the live room", () => {
     const r0 = await memberRoom(h.db, await link("M02"), month2());
     const amount = r0.nextMinPaise / 100 + 5000;
     const codes = [...tokens.keys()].filter((c) => c !== "M01" && d.seats.findIndex((s) => s.code === c) !== r0.leader);
-    const res = await Promise.allSettled(codes.map(async (c) => memberBid(h.db, await link(c), month2(), amount)));
+    const res = await Promise.allSettled(codes.map(async (c) => memberBid(h.db, await link(c), month2(), amount, pin(c))));
     expect(res.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+  });
+
+  it("a bid needs the PIN; wrong PINs place nothing, are audited, and lock only the phone that guessed", async () => {
+    const r0 = await memberRoom(h.db, await link("M02"), month2());
+    const code = ["M07", "M08"].find((c) => d.seats.findIndex((s) => s.code === c) !== r0.leader)!;
+    const l = await link(code);
+    const amount = r0.nextMinPaise / 100;
+    const wrong = pin(code) === "000000" ? "111111" : "000000";
+    for (const bad of ["", "1234", "abcdef", undefined as unknown as string]) await expect(memberBid(h.db, l, month2(), amount, bad, "1.1.1.1")).rejects.toThrow("PIN_NEEDED");
+    // parallel guesses can't slip past the limit, and don't use up the member's bid tries
+    const tries = await Promise.allSettled(Array.from({ length: 12 }, () => memberBid(h.db, l, month2(), amount, wrong, "1.1.1.1")));
+    const codes = tries.map((t) => (t as PromiseRejectedResult).reason.code as string);
+    expect(codes.filter((c) => c === "PIN_WRONG").length).toBeLessThanOrEqual(5);
+    expect(codes.every((c) => c === "PIN_WRONG" || c === "PIN_LOCKED")).toBe(true);
+    for (let i = 0; i < 6; i++) await memberBid(h.db, l, month2(), amount, wrong, "1.1.1.1").catch(() => {});
+    await expect(memberBid(h.db, l, month2(), amount, pin(code), "1.1.1.1")).rejects.toThrow("PIN_LOCKED");
+    expect((await memberRoom(h.db, l, month2())).bids.length).toBe(r0.bids.length);
+    const rows = await h.db.select().from(auditLog).where(eq(auditLog.action, "pin.wrong"));
+    expect(rows.some((x) => x.actorId === l.seatId)).toBe(true);
+    expect(JSON.stringify(rows)).not.toContain(wrong + '"');
+    // the member, on another connection, still bids; a right PIN leaves no try behind
+    const before = (await h.db.select().from(loginAttempt)).length;
+    await memberBid(h.db, l, month2(), amount, pin(code), "2.2.2.2");
+    expect((await h.db.select().from(loginAttempt)).length).toBe(before);
+    expect((await memberRoom(h.db, l, month2())).bids.length).toBe(r0.bids.length + 1);
   });
 
   it("a stuck button is slowed down (8 tries per 10 s per seat)", () => {
@@ -206,7 +238,7 @@ describe("live stream (SSE)", () => {
 
     const snap = await memberRoom(h.db, await link("M04"), month2());
     const bidder = snap.leader === 4 ? "M06" : "M05";
-    await memberBid(h.db, await link(bidder), month2(), snap.nextMinPaise / 100);
+    await memberBid(h.db, await link(bidder), month2(), snap.nextMinPaise / 100, pin(bidder));
     const second = (await next()) as { data: { bids: unknown[] } };
     expect(second.data.bids.length).toBe(first.data.bids.length + 1);
 
@@ -259,5 +291,104 @@ describe("live stream (SSE)", () => {
     await revokeLink(h.db, org, seat("M09").id); // revoke itself pushes to the open month
     expect((await next()).event).toBe("gone");
     ac.abort();
+  });
+});
+
+/* ------------------------------ group link + PIN ------------------------------ */
+
+describe("group link and PIN", () => {
+  let chitId: string;
+  let g: Group;
+  const ids = async () => Object.fromEntries((await getChitDetail(h.db, org, chitId)).seats.map((s) => [s.code, s.id]));
+  const pinOf = async (code: string) => (await chitPins(h.db, org, chitId)).find((p) => p.codes.includes(code))!.pin;
+  const on = async () => (await connectedSeats(h.db, org, chitId)).map((c) => c.seatId);
+
+  beforeAll(async () => {
+    chitId = await createChit(h.db, org, { totalRupees: 100000, months: 5, code: "GRP" });
+    await addSeat(h.db, org, chitId, { name: "Ravi", phone: "9700000001" });
+    await addSeat(h.db, org, chitId, { name: "Ravi", phone: "9700000001" });
+    await addSeat(h.db, org, chitId, { name: "Selvi", phone: "9700000002" });
+    await addSeat(h.db, org, chitId, { name: "Kumar", phone: "9700000003" });
+    g = (await resolveGroup(h.db, await groupToken(h.db, org, chitId))) as Group;
+  });
+
+  it("works before Start; PINs are fixed, one per person, and only for this organiser", async () => {
+    expect(g.chitId).toBe(chitId);
+    const a = await chitPins(h.db, org, chitId);
+    expect(a.map((p) => p.codes)).toEqual([["GRP01"], ["GRP02", "GRP03"], ["GRP04"], ["GRP05"]]);
+    for (const p of a) expect(p.pin).toMatch(/^\d{6}$/);
+    expect(await chitPins(h.db, org, chitId)).toEqual(a);
+    await expect(chitPins(h.db, otherOrg, chitId)).rejects.toThrow("CHIT_NOT_FOUND");
+    await expect(groupToken(h.db, otherOrg, chitId)).rejects.toThrow("CHIT_NOT_FOUND");
+    await expect(resetPin(h.db, otherOrg, (await ids()).GRP04)).rejects.toThrow("SEAT_NOT_FOUND");
+    const view = JSON.stringify(await groupView(h.db, g));
+    for (const secret of ["97000000", "Ravi", ...a.map((p) => p.pin)]) expect(view).not.toContain(secret);
+  });
+
+  it("sending a private link or showing PINs connects nobody; a PIN sign-in connects all that person's IDs", async () => {
+    const s = await ids();
+    await issueLink(h.db, org, s.GRP04);
+    expect(await on()).toEqual([]);
+    await expect(joinWithPin(h.db, g, s.GRP02, await pinOf("GRP04"), "3.3.3.3")).rejects.toThrow("PIN_WRONG");
+    expect(await on()).toEqual([]);
+    const got = await joinWithPin(h.db, g, s.GRP02, await pinOf("GRP02"), "3.3.3.3");
+    expect(got.map((x) => x.code)).toEqual(["GRP02", "GRP03"]);
+    expect((await on()).sort()).toEqual([s.GRP02, s.GRP03].sort());
+    expect(await resolveLink(h.db, got[0].token)).toMatchObject({ seatId: s.GRP02, chitId });
+    expect((await memberHome(h.db, (await resolveLink(h.db, got[0].token)) as Link)).me.code).toBe("GRP02");
+  });
+
+  it("a seat of another chit can't be used; wrong tries lock out", async () => {
+    await expect(joinWithPin(h.db, g, seat("M05").id, pin("M05"), "4.4.4.4")).rejects.toThrow("SEAT_NOT_FOUND");
+    const s = await ids();
+    const good = await pinOf("GRP05");
+    const wrong = good === "000000" ? "111111" : "000000";
+    for (let i = 0; i < 5; i++) await expect(joinWithPin(h.db, g, s.GRP05, wrong, "5.5.5.5")).rejects.toThrow("PIN_WRONG");
+    await expect(joinWithPin(h.db, g, s.GRP05, good, "5.5.5.5")).rejects.toThrow("PIN_LOCKED");
+    expect(await joinWithPin(h.db, g, s.GRP05, good, "6.6.6.6")).toHaveLength(1);
+  });
+
+  it("a new PIN signs the phone out; a new group link stops the old one but keeps phones in", async () => {
+    const s = await ids();
+    const [a] = await joinWithPin(h.db, g, s.GRP04, await pinOf("GRP04"), "7.7.7.7");
+    const old = await groupToken(h.db, org, chitId);
+    const fresh = await groupToken(h.db, org, chitId, true);
+    expect(await resolveGroup(h.db, old)).toBeNull();
+    expect(await resolveGroup(h.db, fresh)).not.toBeNull();
+    expect(await resolveLink(h.db, a.token)).not.toBeNull();
+    const before = await pinOf("GRP04");
+    const next = await resetPin(h.db, org, s.GRP04);
+    expect(await resolveLink(h.db, a.token)).toBeNull();
+    expect(await on()).not.toContain(s.GRP04);
+    if (before !== next) await expect(joinWithPin(h.db, g, s.GRP04, before, "7.7.7.7")).rejects.toThrow("PIN_WRONG");
+    await joinWithPin(h.db, g, s.GRP04, next, "7.7.7.7");
+  });
+
+  it("draft edits: a new mobile drops the old PIN and phones; a connected ID can still be removed", async () => {
+    const s = await ids();
+    await updateSeat(h.db, org, s.GRP04, { name: "Selvi R", phone: "9700000002" });
+    expect(await on()).toContain(s.GRP04); // same mobile: nothing lost
+    const mine = await pinOf("GRP05");
+    await updateSeat(h.db, org, s.GRP05, { name: "Mani", phone: "9700000009" });
+    expect(await on()).not.toContain(s.GRP05);
+    await expect(joinWithPin(h.db, g, s.GRP05, mine, "8.8.8.8")).rejects.toThrow(/PIN_NOT_SET|PIN_WRONG/);
+    await removeSeat(h.db, org, s.GRP04);
+    expect(await on()).not.toContain(s.GRP04);
+  });
+
+  it("transfer in a running chit clears the PIN and signs the old phone out", async () => {
+    const s = seat("M19");
+    const mg = (await resolveGroup(h.db, await groupToken(h.db, org, d.chit.id))) as Group;
+    const [a] = await joinWithPin(h.db, mg, s.id, pin("M19"), "9.9.9.9");
+    await transferSeat(h.db, org, s.id, { name: "New", phone: "9711111111" });
+    expect(await resolveLink(h.db, a.token)).toBeNull();
+    await expect(joinWithPin(h.db, mg, s.id, pin("M19"), "9.9.9.9")).rejects.toThrow("PIN_NOT_SET");
+  });
+
+  it("a paused organiser's group link says 'paused'", async () => {
+    const t = await groupToken(h.db, org, chitId);
+    await setOrganiserActive(h.db, ADMIN, org, false);
+    expect(await resolveGroup(h.db, t)).toBe("paused");
+    await setOrganiserActive(h.db, ADMIN, org, true);
   });
 });

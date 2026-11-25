@@ -88,7 +88,7 @@ export async function transferSeat(db: DB, orgId: string, seatId: string, input:
     const now = new Date();
     const links = await tx.update(memberLink).set({ revokedAt: now }).where(and(eq(memberLink.seatId, seatId), isNull(memberLink.revokedAt))).returning({ id: memberLink.id });
     await tx.delete(pushSubscription).where(eq(pushSubscription.seatId, seatId));
-    await tx.update(seat).set({ name, phone, aadhaarEnc: blob, aadhaarLast4: a ? a.slice(8) : null }).where(eq(seat.id, seatId));
+    await tx.update(seat).set({ name, phone, pinEnc: null, aadhaarEnc: blob, aadhaarLast4: a ? a.slice(8) : null }).where(eq(seat.id, seatId));
     await tx.insert(auditLog).values(audit(orgId, "seat.transfer", { seatId, from: { name: s.name, phone: s.phone }, to: { name, phone }, linksRevoked: links.length }));
     return openRoomsAfter(tx, s.chitId);
   });

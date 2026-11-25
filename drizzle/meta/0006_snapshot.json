@@ -1,0 +1,1835 @@
+{
+  "id": "4c5dd51a-bd83-4d55-9f94-148468cd0d08",
+  "prevId": "3b914160-5d24-4519-8ce6-41f679b15c5f",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.audit_log": {
+      "name": "audit_log",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "organiser_id": {
+          "name": "organiser_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor_kind": {
+          "name": "actor_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "details": {
+          "name": "details",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "at": {
+          "name": "at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "audit_by_org": {
+          "name": "audit_by_org",
+          "columns": [
+            {
+              "expression": "organiser_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "audit_log_organiser_id_organiser_id_fk": {
+          "name": "audit_log_organiser_id_organiser_id_fk",
+          "tableFrom": "audit_log",
+          "tableTo": "organiser",
+          "columnsFrom": [
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "audit_actor": {
+          "name": "audit_actor",
+          "value": "\"audit_log\".\"actor_kind\" in ('admin','organiser','member','system')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.bid": {
+      "name": "bid",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "organiser_id": {
+          "name": "organiser_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "month_id": {
+          "name": "month_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seat_id": {
+          "name": "seat_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_paise": {
+          "name": "amount_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "at": {
+          "name": "at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "bid_organiser_id_organiser_id_fk": {
+          "name": "bid_organiser_id_organiser_id_fk",
+          "tableFrom": "bid",
+          "tableTo": "organiser",
+          "columnsFrom": [
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bid_month_id_month_id_fk": {
+          "name": "bid_month_id_month_id_fk",
+          "tableFrom": "bid",
+          "tableTo": "month",
+          "columnsFrom": [
+            "month_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bid_seat_id_seat_id_fk": {
+          "name": "bid_seat_id_seat_id_fk",
+          "tableFrom": "bid",
+          "tableTo": "seat",
+          "columnsFrom": [
+            "seat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bid_month_same_org": {
+          "name": "bid_month_same_org",
+          "tableFrom": "bid",
+          "tableTo": "month",
+          "columnsFrom": [
+            "month_id",
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id",
+            "organiser_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bid_seat_same_org": {
+          "name": "bid_seat_same_org",
+          "tableFrom": "bid",
+          "tableTo": "seat",
+          "columnsFrom": [
+            "seat_id",
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id",
+            "organiser_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "bid_amount_per_month": {
+          "name": "bid_amount_per_month",
+          "nullsNotDistinct": false,
+          "columns": [
+            "month_id",
+            "amount_paise"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "bid_amount": {
+          "name": "bid_amount",
+          "value": "\"bid\".\"amount_paise\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.chit": {
+      "name": "chit",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "organiser_id": {
+          "name": "organiser_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_paise": {
+          "name": "total_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "months": {
+          "name": "months",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rate_bps": {
+          "name": "rate_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "increment_paise": {
+          "name": "increment_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "open_time": {
+          "name": "open_time",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'09:00'"
+        },
+        "display": {
+          "name": "display",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'id'"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "group_token": {
+          "name": "group_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "chit_organiser_id_organiser_id_fk": {
+          "name": "chit_organiser_id_organiser_id_fk",
+          "tableFrom": "chit",
+          "tableTo": "organiser",
+          "columnsFrom": [
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "chit_group_token_unique": {
+          "name": "chit_group_token_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "group_token"
+          ]
+        },
+        "chit_code_per_organiser": {
+          "name": "chit_code_per_organiser",
+          "nullsNotDistinct": false,
+          "columns": [
+            "organiser_id",
+            "code"
+          ]
+        },
+        "chit_id_org": {
+          "name": "chit_id_org",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "organiser_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "chit_months": {
+          "name": "chit_months",
+          "value": "\"chit\".\"months\" between 2 and 120"
+        },
+        "chit_total": {
+          "name": "chit_total",
+          "value": "\"chit\".\"total_paise\" > 0 and \"chit\".\"total_paise\" % \"chit\".\"months\" = 0"
+        },
+        "chit_rate": {
+          "name": "chit_rate",
+          "value": "\"chit\".\"rate_bps\" between 1 and 10000"
+        },
+        "chit_increment": {
+          "name": "chit_increment",
+          "value": "\"chit\".\"increment_paise\" > 0 and \"chit\".\"increment_paise\" < \"chit\".\"total_paise\""
+        },
+        "chit_display": {
+          "name": "chit_display",
+          "value": "\"chit\".\"display\" in ('id','name')"
+        },
+        "chit_status": {
+          "name": "chit_status",
+          "value": "\"chit\".\"status\" in ('draft','active','completed')"
+        },
+        "chit_start_day": {
+          "name": "chit_start_day",
+          "value": "\"chit\".\"start_date\" is null or extract(day from \"chit\".\"start_date\") between 1 and 28"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.login_attempt": {
+      "name": "login_attempt",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "at": {
+          "name": "at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "login_attempt_key_at": {
+          "name": "login_attempt_key_at",
+          "columns": [
+            {
+              "expression": "key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.member_link": {
+      "name": "member_link",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "organiser_id": {
+          "name": "organiser_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seat_id": {
+          "name": "seat_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'link'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "member_link_seat": {
+          "name": "member_link_seat",
+          "columns": [
+            {
+              "expression": "seat_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "member_link_organiser_id_organiser_id_fk": {
+          "name": "member_link_organiser_id_organiser_id_fk",
+          "tableFrom": "member_link",
+          "tableTo": "organiser",
+          "columnsFrom": [
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "member_link_seat_id_seat_id_fk": {
+          "name": "member_link_seat_id_seat_id_fk",
+          "tableFrom": "member_link",
+          "tableTo": "seat",
+          "columnsFrom": [
+            "seat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "member_link_seat_same_org": {
+          "name": "member_link_seat_same_org",
+          "tableFrom": "member_link",
+          "tableTo": "seat",
+          "columnsFrom": [
+            "seat_id",
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id",
+            "organiser_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "member_link_token_hash_unique": {
+          "name": "member_link_token_hash_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token_hash"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.month": {
+      "name": "month",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "organiser_id": {
+          "name": "organiser_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chit_id": {
+          "name": "chit_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "month": {
+          "name": "month",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auction_date": {
+          "name": "auction_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bidding": {
+          "name": "bidding",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "min_discount_paise": {
+          "name": "min_discount_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "discount_paise": {
+          "name": "discount_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "winner_seat_id": {
+          "name": "winner_seat_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lottery": {
+          "name": "lottery",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "opened_at": {
+          "name": "opened_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "closed_at": {
+          "name": "closed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "month_organiser_id_organiser_id_fk": {
+          "name": "month_organiser_id_organiser_id_fk",
+          "tableFrom": "month",
+          "tableTo": "organiser",
+          "columnsFrom": [
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "month_chit_id_chit_id_fk": {
+          "name": "month_chit_id_chit_id_fk",
+          "tableFrom": "month",
+          "tableTo": "chit",
+          "columnsFrom": [
+            "chit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "month_winner_seat_id_seat_id_fk": {
+          "name": "month_winner_seat_id_seat_id_fk",
+          "tableFrom": "month",
+          "tableTo": "seat",
+          "columnsFrom": [
+            "winner_seat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "month_chit_same_org": {
+          "name": "month_chit_same_org",
+          "tableFrom": "month",
+          "tableTo": "chit",
+          "columnsFrom": [
+            "chit_id",
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id",
+            "organiser_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "month_winner_same_org": {
+          "name": "month_winner_same_org",
+          "tableFrom": "month",
+          "tableTo": "seat",
+          "columnsFrom": [
+            "winner_seat_id",
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id",
+            "organiser_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "month_per_chit": {
+          "name": "month_per_chit",
+          "nullsNotDistinct": false,
+          "columns": [
+            "chit_id",
+            "month"
+          ]
+        },
+        "month_id_org": {
+          "name": "month_id_org",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "organiser_id"
+          ]
+        },
+        "month_one_win_per_seat": {
+          "name": "month_one_win_per_seat",
+          "nullsNotDistinct": false,
+          "columns": [
+            "chit_id",
+            "winner_seat_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "month_status": {
+          "name": "month_status",
+          "value": "\"month\".\"status\" in ('pending','open','closed')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.notification": {
+      "name": "notification",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "organiser_id": {
+          "name": "organiser_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seat_id": {
+          "name": "seat_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "month_id": {
+          "name": "month_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fields": {
+          "name": "fields",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "pushed": {
+          "name": "pushed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "notification_seat": {
+          "name": "notification_seat",
+          "columns": [
+            {
+              "expression": "seat_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "notification_reminder_once": {
+          "name": "notification_reminder_once",
+          "columns": [
+            {
+              "expression": "seat_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "month_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"notification\".\"kind\" = 'reminder'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "notification_organiser_id_organiser_id_fk": {
+          "name": "notification_organiser_id_organiser_id_fk",
+          "tableFrom": "notification",
+          "tableTo": "organiser",
+          "columnsFrom": [
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "notification_seat_id_seat_id_fk": {
+          "name": "notification_seat_id_seat_id_fk",
+          "tableFrom": "notification",
+          "tableTo": "seat",
+          "columnsFrom": [
+            "seat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "notification_month_id_month_id_fk": {
+          "name": "notification_month_id_month_id_fk",
+          "tableFrom": "notification",
+          "tableTo": "month",
+          "columnsFrom": [
+            "month_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "notification_seat_same_org": {
+          "name": "notification_seat_same_org",
+          "tableFrom": "notification",
+          "tableTo": "seat",
+          "columnsFrom": [
+            "seat_id",
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id",
+            "organiser_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "notification_month_same_org": {
+          "name": "notification_month_same_org",
+          "tableFrom": "notification",
+          "tableTo": "month",
+          "columnsFrom": [
+            "month_id",
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id",
+            "organiser_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "notification_kind": {
+          "name": "notification_kind",
+          "value": "\"notification\".\"kind\" in ('open','date','closed','reminder','receipt','correction')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.organiser": {
+      "name": "organiser",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "business_name": {
+          "name": "business_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_name_ta": {
+          "name": "business_name_ta",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "owner_name": {
+          "name": "owner_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mobile": {
+          "name": "mobile",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "must_change_password": {
+          "name": "must_change_password",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "lang": {
+          "name": "lang",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'en'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "organiser_mobile_unique": {
+          "name": "organiser_mobile_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "mobile"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "organiser_mobile_10": {
+          "name": "organiser_mobile_10",
+          "value": "\"organiser\".\"mobile\" ~ '^[6-9][0-9]{9}$'"
+        },
+        "organiser_lang": {
+          "name": "organiser_lang",
+          "value": "\"organiser\".\"lang\" in ('en','ta')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.payment": {
+      "name": "payment",
+      "schema": "",
+      "columns": {
+        "organiser_id": {
+          "name": "organiser_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "month_id": {
+          "name": "month_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seat_id": {
+          "name": "seat_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "paid": {
+          "name": "paid",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "adjusted": {
+          "name": "adjusted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "payment_organiser_id_organiser_id_fk": {
+          "name": "payment_organiser_id_organiser_id_fk",
+          "tableFrom": "payment",
+          "tableTo": "organiser",
+          "columnsFrom": [
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "payment_month_id_month_id_fk": {
+          "name": "payment_month_id_month_id_fk",
+          "tableFrom": "payment",
+          "tableTo": "month",
+          "columnsFrom": [
+            "month_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "payment_seat_id_seat_id_fk": {
+          "name": "payment_seat_id_seat_id_fk",
+          "tableFrom": "payment",
+          "tableTo": "seat",
+          "columnsFrom": [
+            "seat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "payment_month_same_org": {
+          "name": "payment_month_same_org",
+          "tableFrom": "payment",
+          "tableTo": "month",
+          "columnsFrom": [
+            "month_id",
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id",
+            "organiser_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "payment_seat_same_org": {
+          "name": "payment_seat_same_org",
+          "tableFrom": "payment",
+          "tableTo": "seat",
+          "columnsFrom": [
+            "seat_id",
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id",
+            "organiser_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "payment_month_id_seat_id_pk": {
+          "name": "payment_month_id_seat_id_pk",
+          "columns": [
+            "month_id",
+            "seat_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.payout": {
+      "name": "payout",
+      "schema": "",
+      "columns": {
+        "organiser_id": {
+          "name": "organiser_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "month_id": {
+          "name": "month_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "done": {
+          "name": "done",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "prize_paise": {
+          "name": "prize_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cash_paise": {
+          "name": "cash_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "done_at": {
+          "name": "done_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "payout_organiser_id_organiser_id_fk": {
+          "name": "payout_organiser_id_organiser_id_fk",
+          "tableFrom": "payout",
+          "tableTo": "organiser",
+          "columnsFrom": [
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "payout_month_id_month_id_fk": {
+          "name": "payout_month_id_month_id_fk",
+          "tableFrom": "payout",
+          "tableTo": "month",
+          "columnsFrom": [
+            "month_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "payout_month_same_org": {
+          "name": "payout_month_same_org",
+          "tableFrom": "payout",
+          "tableTo": "month",
+          "columnsFrom": [
+            "month_id",
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id",
+            "organiser_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.push_subscription": {
+      "name": "push_subscription",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "organiser_id": {
+          "name": "organiser_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seat_id": {
+          "name": "seat_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "endpoint": {
+          "name": "endpoint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "p256dh": {
+          "name": "p256dh",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auth": {
+          "name": "auth",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lang": {
+          "name": "lang",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'en'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "last_ok_at": {
+          "name": "last_ok_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "push_subscription_organiser_id_organiser_id_fk": {
+          "name": "push_subscription_organiser_id_organiser_id_fk",
+          "tableFrom": "push_subscription",
+          "tableTo": "organiser",
+          "columnsFrom": [
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "push_subscription_seat_id_seat_id_fk": {
+          "name": "push_subscription_seat_id_seat_id_fk",
+          "tableFrom": "push_subscription",
+          "tableTo": "seat",
+          "columnsFrom": [
+            "seat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "push_subscription_seat_same_org": {
+          "name": "push_subscription_seat_same_org",
+          "tableFrom": "push_subscription",
+          "tableTo": "seat",
+          "columnsFrom": [
+            "seat_id",
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id",
+            "organiser_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "push_subscription_seat_endpoint": {
+          "name": "push_subscription_seat_endpoint",
+          "nullsNotDistinct": false,
+          "columns": [
+            "seat_id",
+            "endpoint"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "push_subscription_lang": {
+          "name": "push_subscription_lang",
+          "value": "\"push_subscription\".\"lang\" in ('en','ta')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.room_join": {
+      "name": "room_join",
+      "schema": "",
+      "columns": {
+        "organiser_id": {
+          "name": "organiser_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "month_id": {
+          "name": "month_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seat_id": {
+          "name": "seat_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "joined_at": {
+          "name": "joined_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "room_join_organiser_id_organiser_id_fk": {
+          "name": "room_join_organiser_id_organiser_id_fk",
+          "tableFrom": "room_join",
+          "tableTo": "organiser",
+          "columnsFrom": [
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "room_join_month_id_month_id_fk": {
+          "name": "room_join_month_id_month_id_fk",
+          "tableFrom": "room_join",
+          "tableTo": "month",
+          "columnsFrom": [
+            "month_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "room_join_seat_id_seat_id_fk": {
+          "name": "room_join_seat_id_seat_id_fk",
+          "tableFrom": "room_join",
+          "tableTo": "seat",
+          "columnsFrom": [
+            "seat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "room_join_month_same_org": {
+          "name": "room_join_month_same_org",
+          "tableFrom": "room_join",
+          "tableTo": "month",
+          "columnsFrom": [
+            "month_id",
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id",
+            "organiser_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "room_join_seat_same_org": {
+          "name": "room_join_seat_same_org",
+          "tableFrom": "room_join",
+          "tableTo": "seat",
+          "columnsFrom": [
+            "seat_id",
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id",
+            "organiser_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "room_join_month_id_seat_id_pk": {
+          "name": "room_join_month_id_seat_id_pk",
+          "columns": [
+            "month_id",
+            "seat_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.seat": {
+      "name": "seat",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "organiser_id": {
+          "name": "organiser_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chit_id": {
+          "name": "chit_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "number": {
+          "name": "number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phone": {
+          "name": "phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aadhaar_enc": {
+          "name": "aadhaar_enc",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aadhaar_last4": {
+          "name": "aadhaar_last4",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pin_enc": {
+          "name": "pin_enc",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_organiser": {
+          "name": "is_organiser",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "lang": {
+          "name": "lang",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'en'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "seat_organiser_id_organiser_id_fk": {
+          "name": "seat_organiser_id_organiser_id_fk",
+          "tableFrom": "seat",
+          "tableTo": "organiser",
+          "columnsFrom": [
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "seat_chit_id_chit_id_fk": {
+          "name": "seat_chit_id_chit_id_fk",
+          "tableFrom": "seat",
+          "tableTo": "chit",
+          "columnsFrom": [
+            "chit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "seat_chit_same_org": {
+          "name": "seat_chit_same_org",
+          "tableFrom": "seat",
+          "tableTo": "chit",
+          "columnsFrom": [
+            "chit_id",
+            "organiser_id"
+          ],
+          "columnsTo": [
+            "id",
+            "organiser_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "seat_number_per_chit": {
+          "name": "seat_number_per_chit",
+          "nullsNotDistinct": false,
+          "columns": [
+            "chit_id",
+            "number"
+          ]
+        },
+        "seat_id_org": {
+          "name": "seat_id_org",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "organiser_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "seat_number": {
+          "name": "seat_number",
+          "value": "\"seat\".\"number\" >= 1"
+        },
+        "seat_phone": {
+          "name": "seat_phone",
+          "value": "\"seat\".\"phone\" ~ '^[6-9][0-9]{9}$'"
+        },
+        "seat_last4": {
+          "name": "seat_last4",
+          "value": "\"seat\".\"aadhaar_last4\" is null or \"seat\".\"aadhaar_last4\" ~ '^[0-9]{4}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.session": {
+      "name": "session",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subject_id": {
+          "name": "subject_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "session_subject": {
+          "name": "session_subject",
+          "columns": [
+            {
+              "expression": "kind",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "subject_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "session_token_hash_unique": {
+          "name": "session_token_hash_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token_hash"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "session_kind": {
+          "name": "session_kind",
+          "value": "\"session\".\"kind\" in ('admin','organiser')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.super_admin": {
+      "name": "super_admin",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "mobile": {
+          "name": "mobile",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Super Admin'"
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "super_admin_mobile_unique": {
+          "name": "super_admin_mobile_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "mobile"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

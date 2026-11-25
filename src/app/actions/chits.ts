@@ -24,6 +24,7 @@ import {
   type NewChit,
 } from "@/server/chits";
 import { issueLink, revokeLink } from "@/server/members";
+import { chitPins, groupToken, resetPin } from "@/server/pins";
 import { setAadhaar, showAadhaar, transferSeat } from "@/server/people";
 import { requireOrganiser } from "@/server/session";
 
@@ -81,3 +82,8 @@ export const revokeLinkAction = async (seatId: string) => run(async (org) => rev
 export const setAadhaarAction = async (seatId: string, value: string) => run(async (org) => setAadhaar(await getDb(), org, seatId, value));
 export const showAadhaarAction = async (seatId: string) => run(async (org) => showAadhaar(await getDb(), org, seatId));
 export const transferSeatAction = async (seatId: string, input: { name: string; phone: string; aadhaar?: string }) => run(async (org) => transferSeat(await getDb(), org, seatId, input));
+
+/* group link + member PINs (BUSINESS-CONCEPT §10) */
+export const groupTokenAction = async (chitId: string, renew = false) => run(async (org) => groupToken(await getDb(), org, chitId, renew === true));
+export const chitPinsAction = async (chitId: string) => run(async (org) => chitPins(await getDb(), org, chitId));
+export const resetPinAction = async (seatId: string) => run(async (org) => resetPin(await getDb(), org, seatId));

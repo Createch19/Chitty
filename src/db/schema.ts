@@ -99,6 +99,7 @@ export const chit = pgTable(
     display: text("display").notNull().default("id"),
     status: text("status").notNull().default("draft"),
     startDate: date("start_date"),
+    groupToken: text("group_token").unique(), // the one link shared in the chit's WhatsApp group; useless without a PIN
     createdAt: createdAt(),
   },
   (t) => [
@@ -126,6 +127,7 @@ export const seat = pgTable(
     phone: text("phone").notNull(),
     aadhaarEnc: bytea("aadhaar_enc"),
     aadhaarLast4: text("aadhaar_last4"),
+    pinEnc: bytea("pin_enc"), // sealed like Aadhaar; the organiser can show it again
     isOrganiser: boolean("is_organiser").notNull().default(false),
     lang: text("lang").notNull().default("en"),
     createdAt: createdAt(),
@@ -225,6 +227,7 @@ export const memberLink = pgTable(
     organiserId: uuid("organiser_id").notNull().references(() => organiser.id),
     seatId: uuid("seat_id").notNull().references(() => seat.id),
     tokenHash: text("token_hash").notNull().unique(),
+    kind: text("kind").notNull().default("link"), // link = sent by the organiser; device = a phone that joined with the PIN
     createdAt: createdAt(),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
   },

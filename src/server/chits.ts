@@ -183,7 +183,12 @@ export async function updateSeat(db: DB, orgId: string, seatId: string, input: {
     const [s] = await tx.select().from(seat).where(eq(seat.id, seatId));
     if (!s) throw new ChitError("SEAT_NOT_FOUND");
     await draftChit(tx, s.chitId);
-    await tx.update(seat).set({ name, phone }).where(eq(seat.id, seatId));
+    const moved = phone !== s.phone; // another person's phone: its old PIN, links and alerts must not carry over
+    if (moved) {
+      await tx.delete(pushSubscription).where(eq(pushSubscription.seatId, seatId));
+      await tx.delete(memberLink).where(eq(memberLink.seatId, seatId));
+    }
+    await tx.update(seat).set({ name, phone, ...(moved ? { pinEnc: null } : {}) }).where(eq(seat.id, seatId));
   });
 }
 
@@ -193,6 +198,8 @@ export async function removeSeat(db: DB, orgId: string, seatId: string) {
     if (!s) throw new ChitError("SEAT_NOT_FOUND");
     await draftChit(tx, s.chitId);
     if (s.isOrganiser) throw new ChitError("ORGANISER_SEAT");
+    await tx.delete(pushSubscription).where(eq(pushSubscription.seatId, seatId));
+    await tx.delete(memberLink).where(eq(memberLink.seatId, seatId));
     await tx.delete(seat).where(eq(seat.id, seatId));
   });
 }

@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { ChitPage } from "@/components/organiser/ChitPage";
 import { getDb } from "@/db/client";
 import { ChitError, getChitDetail } from "@/server/chits";
-import { linkStatus } from "@/server/members";
+import { connectedSeats, linkStatus } from "@/server/members";
 import { Frame, Shell, Skeleton } from "@/server/org-page";
 import { istNow } from "@/server/scheduler";
 
@@ -20,7 +20,8 @@ async function Content({ params }: { params: Promise<{ chitId: string }> }) {
           const db = await getDb();
           const d = await getChitDetail(db, me.id, chitId);
           const links = Object.fromEntries((await linkStatus(db, me.id, chitId)).map((l) => [l.seatId, l.createdAt.toISOString()]));
-          return <ChitPage d={d} links={links} today={istNow(new Date()).date} />;
+          const connected = (await connectedSeats(db, me.id, chitId)).map((c) => c.seatId);
+          return <ChitPage d={d} links={links} connected={connected} today={istNow(new Date()).date} />;
         } catch (e) {
           if (e instanceof ChitError) notFound();
           throw e;
