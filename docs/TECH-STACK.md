@@ -50,7 +50,7 @@ The business rules are in [BUSINESS-CONCEPT.md](BUSINESS-CONCEPT.md); where the 
   - Organiser: the collection page's WhatsApp button sends the same text (the reminder within 2 days of the last day), and
     open or upcoming months have **Post in WhatsApp group**.
   - Also fixed: a winner's own share no longer shows as "due" on the member home; it reads "taken from your prize at payout".
-  - 100 Vitest tests (14 new). **Not yet verified on a real phone** (the Phase 4 "done when"); the in-app browser blocks notifications.
+  - 100 Vitest tests (14 new). Push checked by the owner on a real iPhone and Android phone (2026-11-25).
   - Not built: a push to the organiser when an auction can't open because last month isn't closed (the organiser has no push yet).
 - **Phase 5 (reports, import, transfer, Aadhaar, audit): built.**
   - **Aadhaar:** Verhoeff-checked, sealed with AES-256-GCM (seat id bound in), key in `CHITTY_AADHAAR_KEY` (32 bytes, base64; never
@@ -69,7 +69,7 @@ The business rules are in [BUSINESS-CONCEPT.md](BUSINESS-CONCEPT.md); where the 
 - **Local database:** without `DATABASE_URL` the app uses **PGlite**, an embedded PostgreSQL 17 kept in `./.data/pglite`.
   It needs no install and no password. Production uses real PostgreSQL through `DATABASE_URL`, with the same migrations.
   **Run against a real PostgreSQL 17 server on 2026-11-21** (the 120 tests of that day; `CHITTY_TEST_PG=<server url> npx vitest run`,
-  with role `chitty_app` created first). Production runs on PostgreSQL 16; the test suite has not been run on 16.
+  with role `chitty_app` created first). Production runs on PostgreSQL 16; the suite (135 tests) was also run on PostgreSQL 16 on 2026-11-25.
 - `drizzle-kit` (a dev-only tool) pulls an old esbuild with a moderate advisory about esbuild's dev server.
   It is not used and not shipped.
 
@@ -182,9 +182,9 @@ Each phase ends with its tests passing and a check-in with the owner.
 | **1. Foundation** ✅ | Next.js app, PostgreSQL schema and migrations, tenancy with RLS. Super Admin seed and login; organiser create, edit, disable, reset and usage counts; organiser login. Money and rules modules ported, with the 5L/20 tests. | Tests pass, including cross-tenant attack tests. |
 | **2. Chits and months** ✅ | Draft chit with schedule preview, member IDs, Start with a date, month-1 auto winner, scheduler auto-open, close with confirm, lottery, per-month date change. Paid tick/untick, payout with adjustments and arrears, rounding difference, collection bowl and payout animations. | A full 20-month chit runs in tests. |
 | **3. Members and live room** ✅ | Member links and WhatsApp share, PWA install guide, member app (account and schedule), live room over SSE with the bid box and every rule, auction-room animations. | Playwright: 20 parallel members, same-moment bids, reconnect, link revoke, arrears and leader blocks. |
-| **4. Notifications** ✅ (phone check pending) | Web Push: open, date change, closed summary, 2-day reminder, receipt and correction. WhatsApp backup buttons, per-user language. | Push verified on a real Android phone. |
+| **4. Notifications** ✅ | Web Push: open, date change, closed summary, 2-day reminder, receipt and correction. WhatsApp backup buttons, per-user language. | Push verified on a real Android phone. |
 | **5. Reports, import, transfer, Aadhaar** ✅ | 5 reports with CSV and print, Excel import with template, preview and errors, seat transfer, encrypted Aadhaar with audited Show, audit log viewer. | A real paper chit imports cleanly. |
-| **6. Deploy** (live since 2026-11-21; restore tested 2026-11-25; key backup done and home-screen app checked on iPhone, per the owner; nightly run, Edit and push on phone, Demo organiser not confirmed) | Dockerfile, private GitHub repo, Coolify app, PostgreSQL, secrets, limits, health check, nightly backup, domain and HTTPS, Super Admin seed, Demo organiser. | The live site works on the phone. |
+| **6. Deploy** (live since 2026-11-21; restore tested, key backed up, Demo organiser made, home-screen app, Edit, PIN sign-in and push checked on phones by the owner, 2026-11-25; only the first nightly backup run is not confirmed) | Dockerfile, private GitHub repo, Coolify app, PostgreSQL, secrets, limits, health check, nightly backup, domain and HTTPS, Super Admin seed, Demo organiser. | The live site works on the phone. |
 | **7. Dry run and hardening** | A full simulated chit with the Demo organiser, a security review, fixes. | The owner signs off on using it for real chits. |
 
 ## 6. The phase-1 SQLite prototype
