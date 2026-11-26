@@ -193,7 +193,7 @@ Members are notified, and that month's last payment day moves with it.
   message and the organiser taps Send. The link stays the same for the whole chit.
 - **Group link + PIN:** a chit has **one link for its WhatsApp group**. Each person has **one fixed random 6-digit PIN per chit**
   (all their IDs under the same mobile share it); the organiser sends it privately, can show it again, or make a new one.
-  The member opens the group link, chooses the ID and types the PIN; the phone then remembers. Works before Start too.
+  The member opens the group link, chooses the ID (the list shows each ID with its name, never phones) and types the PIN; the phone then remembers. Works before Start too.
   An ID shows **Connected** only after a PIN sign-in, never just because a link was sent. A new PIN signs those phones out.
   PINs are stored encrypted; every view of the PIN list and every wrong PIN is audited. Private links stay as an option.
 - **Transfer:** a seat can pass to a new person mid-chit. The ID stays the same and the name and phone change.

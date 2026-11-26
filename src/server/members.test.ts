@@ -321,8 +321,9 @@ describe("group link and PIN", () => {
     await expect(chitPins(h.db, otherOrg, chitId)).rejects.toThrow("CHIT_NOT_FOUND");
     await expect(groupToken(h.db, otherOrg, chitId)).rejects.toThrow("CHIT_NOT_FOUND");
     await expect(resetPin(h.db, otherOrg, (await ids()).GRP04)).rejects.toThrow("SEAT_NOT_FOUND");
-    const view = JSON.stringify(await groupView(h.db, g));
-    for (const secret of ["97000000", "Ravi", ...a.map((p) => p.pin)]) expect(view).not.toContain(secret);
+    const view = await groupView(h.db, g);
+    expect(view.seats.map((s) => s.label)).toEqual(["GRP01 · Murugan", "GRP02 · Ravi", "GRP03 · Ravi", "GRP04 · Selvi", "GRP05 · Kumar"]);
+    for (const secret of ["97000000", ...a.map((p) => p.pin)]) expect(JSON.stringify(view)).not.toContain(secret);
   });
 
   it("sending a private link or showing PINs connects nobody; a PIN sign-in connects all that person's IDs", async () => {

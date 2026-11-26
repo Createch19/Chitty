@@ -91,13 +91,13 @@ export async function resolveGroup(db: DB, token: string): Promise<Group | "paus
   return r.active ? { chitId: r.chitId, organiserId: r.organiserId } : "paused";
 }
 
-/** What the join page may show: IDs (with names only if the chit shows names). Never phones or PINs. */
+/** What the join page may show: every ID with its name, so members find their own. Never phones or PINs. */
 export async function groupView(db: DB, g: Group) {
   return withOrganiser(db, g.organiserId, async (tx) => {
     const [org] = await tx.select({ business: organiser.businessName, businessTa: organiser.businessNameTa }).from(organiser);
     const [c] = await tx.select().from(chit).where(eq(chit.id, g.chitId));
     const seats = await tx.select({ id: seat.id, number: seat.number, name: seat.name }).from(seat).where(eq(seat.chitId, g.chitId)).orderBy(asc(seat.number));
-    return { ...org, code: c.code, totalPaise: c.totalPaise, seats: seats.map((s) => ({ id: s.id, label: c.display === "name" ? `${seatCode(c.code, s.number)} · ${s.name}` : seatCode(c.code, s.number) })) };
+    return { ...org, code: c.code, totalPaise: c.totalPaise, seats: seats.map((s) => ({ id: s.id, label: `${seatCode(c.code, s.number)} · ${s.name}` })) };
   });
 }
 
